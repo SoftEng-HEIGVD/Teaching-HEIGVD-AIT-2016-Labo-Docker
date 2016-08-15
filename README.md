@@ -559,9 +559,10 @@ trap sigterm SIGTERM
 
 # We build the Serf command to run the agent
 COMMAND="/opt/bin/serf agent"
-COMMAND="$COMMAND --join serf-cluster"
-COMMAND="$COMMAND --event-handler member-join,=/opt/serf/member-add.sh"
-COMMAND="$COMMAND --event-handler member-leave,member-failed=/opt/serf/member-remove.sh"
+COMMAND="$COMMAND --join ha"
+COMMAND="$COMMAND --replay"
+COMMAND="$COMMAND --event-handler member-join=/serf-handlers/member-join.sh"
+COMMAND="$COMMAND --event-handler member-leave,member-failed=/serf-handlers/member-leave.sh"
 COMMAND="$COMMAND --tag role=$ROLE"
 
 # ##############################################################################
@@ -589,17 +590,43 @@ serf agent
 ```
 
 Next, we append to the command the way to join a specific `Serf` cluster where the
-name of the cluster is `serf-cluster`.
+address of the cluster is `ha`. In fact, our `ha` node will act as a sort of master
+node but as we are in a decentralized architecture, it can be any of the nodes with
+a `Serf` agent.
+
+For example, if we start `ha` first, then `s2` and finally `s1`, we can imagine
+that `ha` will connect serf to itself as it is the first one. Then, `s2` will
+reference to `ha` to be in the same cluster and finally `s1` can reference `s1`.
+Therefore, `s1` will join the same cluster than `s2` and `ha` but through `s2`.
+
+For simplicity, all our nodes will register to the same cluster trough the `ha`
+node.
 
 ```
-serf --join serf-cluster
+--join ha
+```
+
+**Remarks**:
+
+  - Once the cluster is up, if `ha` node leave the cluster, it will not be a real
+    issue. The cluster will continue to exist. In the deliverables, describe which
+    problem exists with the current solution based on the previous explanations and
+    remarks.
+
+To make sure that `ha` load balancer can leave and enter the cluster again, we add
+the `--replay` option. This will allow to replay the past events and then react to
+these events. In fact, due to the problem you have to guess, this will probably not
+be really useful.
+
+```
+--replay
 ```
 
 Then we append the event handlers to react to some events.
 
 ```
---event-handler member-join,=/opt/serf/member-add.sh
---event-handler member-leave,member-failed=/opt/serf/member-remove.sh
+--event-handler member-join=/serf-handlers/member-join.sh
+--event-handler member-leave,member-failed=/serf-handlers/member-leave.sh
 ```
 
 At the moment the `member-add` and `member-remove` scripts are missing. We will add
@@ -619,6 +646,7 @@ backend nodes and our load balancer later in the scripts.
   - [serf agent](https://www.serf.io/docs/agent/basics.html)
   - [event handlers](https://www.serf.io/docs/agent/event-handlers.html)
   - [serf agent configuration](https://www.serf.io/docs/agent/options.html)
+  - [join -replay](https://www.serf.io/docs/commands/join.html#_replay)
 
 Let's prepare the same kind of configuration. Copy the `run` file you just created
 in `webapp/services/serf` and replace the content between `SERF START` and `SERF END`
@@ -645,6 +673,17 @@ COPY services/serf/ /etc/services.d/serf
 RUN chmod +x /etc/services/serf/run
 ```
 
+And finally, you can expose the `Serf` ports through your Docker image files. Replace
+the `TODO: [Serf] Expose ports` by the following content:
+
+```
+EXPOSE 7946 7373
+```
+
+**References**:
+
+  - [EXPOSE](https://docs.docker.com/engine/reference/builder/#/expose)
+
 It's time to build the images and to run the containers. You can use the provided scripts
 run the command manually. At this stage, you should have your application running as the
 `Serf` agents. To ensure that, you can access http://192.168.42.42 to see if you backends
@@ -660,17 +699,199 @@ where container name is one of:
   - s1
   - s2
 
+You will notice the following in the logs (or something similar).
+
+```
+==> Joining cluster...(replay: false)
+==> lookup ha on 10.0.2.3:53: no such host
+```
+
+This means that our nodes are not joining the `Serf` cluster and more important
+cannot resolve the DNS names of the nodes. This is due to the latest versions of
+Docker where the networking have been totally reworked.
+
+To solve this issue, we need to go a little more deeper in Docker commands and we
+need to create our own Docker network. For that, we will use the following command:
+
+```
+sudo docker network create --driver bridge heig
+```
+
+If you want to know more about Docker networking, take the time to read the different
+pages in the references. Docker team provide a good overview and lot of details about
+this important topic.
+
+From now, to start our containers, we need to add the following argument to the `docker run` command
+
+```
+--network heig
+```
+
+So to start the `ha` container the command become:
+
+```
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
+```
+
+And for the backend nodes:
+
+```
+sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
+```
+
+**References**:
+
+  - [docker network create](https://docs.docker.com/engine/reference/commandline/network_create/)
+  - [Understand Docker networking](https://docs.docker.com/engine/userguide/networking/)
+  - [Embedded DNS server in user-defined networks](https://docs.docker.com/engine/userguide/networking/configure-dns/)
+  - [docker run](https://docs.docker.com/engine/reference/commandline/run/)
+
 **Deliverables**:
 
 1. Provides the first 50 lines of docker logs output for each of the containers:  `ha`, `s1` and `s2`
 
 2. Give the name of the branch for the current task
 
-3. Give an explanation on how `Serf` is working. Read the official website to get more
+3. Give the Docker files updated
+
+4. Give the answer to the question about the existing problem with the current solution
+
+5. Give an explanation on how `Serf` is working. Read the official website to get more
   details about the `GOSSIP` protocol used in `Serf`. Try to find other solutions
   that can be used to solve such situation where we need some auto-discovery mechanism.
 
 
+### Task 3: Play with handler scripts
+
+We reached a state where we have nearly all the pieces in place to make the infrastructure
+really dynamic. At the moment, we are missing the scripts that will manage the events
+of serf and then react to member leave or member join.
+
+We will start by creating the scripts in [ha/scripts](ha/scripts). So create two files in
+this directory and set them as executable. You can use these commands:
+
+```
+touch /vagrant/ha/scripts/member-join.sh && chmod +x /vagrant/ha/scripts/member-join.sh
+touch /vagrant/ha/scripts/member-leave.sh && chmod +x /vagrant/ha/scripts/member-leave.sh
+```
+
+In the `member-join.sh` script, put the following content:
+
+```
+#!/usr/bin/env bash
+
+# We iterate over stdin
+while read -a values; do
+  # We extract the hostname, the ip, the role of each line and the tags
+  HOSTNAME=${values[0]}
+  HOSTIP=${values[1]}
+  HOSTROLE=${values[2]}
+  HOSTTAGS=${values[3]}
+
+  echo "Member join event received from: $HOSTNAME with role $HOSTROLE"
+done
+```
+
+Do the same for the `member-leave.sh` with the following content:
+
+```
+#!/usr/bin/env bash
+
+# We iterate over stdin
+while read -a values; do
+  # We extract the hostname, the ip, the role of each line and the tags
+  HOSTNAME=${values[0]}
+  HOSTIP=${values[1]}
+  HOSTROLE=${values[2]}
+  HOSTTAGS=${values[3]}
+
+  echo "Member $SERF_EVENT event received from: $HOSTNAME with role $HOSTROLE"
+done
+```
+
+We have to update our Docker file for `ha` node. Let's replace the
+`TODO: [Serf] Copy events handler scripts` by the following content:
+
+```
+RUN mkdir /serf-handlers
+COPY scripts/member-join.sh /serf-handlers
+COPY scripts/member-leave.sh /serf-handlers
+RUN chmod +x /serf-handlers/*.sh
+```
+
+Stop all your containers to have a fresh state:
+
+```
+sudo docker rm -f s1
+sudo docker rm -f s2
+sudo docker rm -f ha
+```
+
+Now, build you images:
+
+```
+# Build the haproxy image
+cd /vagrant/ha
+sudo docker build -t softengheigvd/ha .
+
+# Build the webapp image
+cd /vagrant/webapp
+sudo docker build -t softengheigvd/webapp .
+```
+
+From there, you will be notified when you need to keep track of the logs. The logs
+will be asked as a deliverable of the lab. You will notice: (**keep logs**) to remind
+you to keep them for the report.
+
+Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
+
+```
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig -v /supervisor:/supervisor --name ha softengheigvd/ha
+```
+
+Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after
+started the container, capture also the logs of `ha` node (**keep the logs**).
+
+```
+sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
+sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --network heig --name s2 softengheigvd/webapp
+```
+
+**Remarks**:
+
+  - You probably noticed that we removed the `links` to container `s1` and `s2`. We will explain that later.
+
+Once started, get the logs (**keep the logs**) of the backend container.
+
+To check there is something happening on the node `ha`, you will need to connect to
+the running container to gather the custom log file that is created in the handler scripts.
+
+For that, use the following command to connect to `ha` container in interactive mode.
+
+```
+sudo docker exec -ti ha /bin/bash
+```
+
+**References**:
+
+  - [docker exec](https://docs.docker.com/engine/reference/commandline/exec/)
+
+Once done, you can simply run the following command. This command is run inside
+the running `ha` container. (**keep the logs**)
+
+```
+cat /var/log/serf.log
+```
+
+**Deliverables**:
+
+1. Provides the first 50 lines of the logs of nodes `ha`, `s1` and `s2`. Give
+  the logs for each step where it was asked for.
+
+2. Give the branch name of the current task
+
+3. Provide the logs from `ha` container gathered directly from the `/var/log/serf.log`
+  file present in the container.
 
 
 
@@ -678,6 +899,11 @@ where container name is one of:
 
 
 
+
+# Install Node.js.
+RUN curl -sSLo /tmp/node.tar.xz https://nodejs.org/dist/v4.4.4/node-v4.4.4-linux-x64.tar.xz \
+    && tar -C /usr/local --strip-components 1 -xf /tmp/node.tar.xz \
+&& rm -f /tmp/node.tar.xz
 
 #### Lab due date
 
