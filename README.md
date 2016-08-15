@@ -277,7 +277,7 @@ sudo docker rm -f ha
 # Start the containers
 sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --name s1 softengheigvd/webapp
 sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --name s2 softengheigvd/webapp
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 or you can use the script to start two base containers:
@@ -730,7 +730,7 @@ From now, to start our containers, we need to add the following argument to the 
 So to start the `ha` container the command become:
 
 ```
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 And for the backend nodes:
@@ -846,7 +846,7 @@ you to keep them for the report.
 Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
 
 ```
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig -v /supervisor:/supervisor --name ha softengheigvd/ha
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --name ha softengheigvd/ha
 ```
 
 Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after

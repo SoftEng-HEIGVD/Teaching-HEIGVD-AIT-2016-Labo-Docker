@@ -33,4 +33,4 @@ sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --name s2 soft
 # Run load balancer
 echo "************************  run haproxy  ************************"
 sudo docker rm -f ha 2>/dev/null || true
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --link s1 --link s2 --name ha softengheigvd/ha
