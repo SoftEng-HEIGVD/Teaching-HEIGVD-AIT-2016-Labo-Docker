@@ -23,6 +23,28 @@ the lab report a structure that mimics the structure of this document.
 
   - The version of HAProxy used in this lab is `1.5`. When reading the doc, take care to read the doc corresponding to this version. Here is the link: http://cbonte.github.io/haproxy-dconv/configuration-1.5.html
 
+  - You must give the fork URL of the repository of this lab.
+
+  - You must create one branch per task (from task 1, no branch for task 0)
+
+    - `Create a branch`: `git checkout -b <branch name>`. Ex: `git checkout -b task-1`
+
+    - `Push a branch (first time)`: `git push -u origin <branch name>`. Ex: `git branch -u origin task-1`
+
+    - `Push updates (second time and following)`: `git push`
+
+    - `Add updates to staging`: `git add <file path>`. Ex: `git add .` (will add all modifications)
+
+    - `Committing staged changes`: `git commit -m "<message>"`. Ex: `git commit -m "Added run script"`
+
+    - `Checkout a branch`: `git checkout <branch name>`. Ex: `git checkout task-1`
+
+    - `Fetching changes from remote`: `git fetch`.
+
+    - `Applying remote changes`: `git pull`
+
+    - Any git issue, ask us for help.
+
 ** DISCLAIMER **: In this lab, we will go through a possible manner to manage a
 scalable infrastructure where we can add and remove nodes without having to rebuild
 the HAProxy server. This is not the only one possibility to achieve such a goal.
@@ -41,8 +63,10 @@ applications:
 
 * [Vagrant](https://www.vagrantup.com/)
 
-Clone the following repository to your machine:
+Fork the following repository and then clone the fork to your machine:
 <https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2015-Labo-02>
+
+To fork the repo, just click on the `Fork` button in the GitHub interface.
 
 Once you have installed everything, start the Vagrant VM from the
 project folder with the following command:
@@ -195,7 +219,7 @@ You have also a good explanation about the Docker way perception from the mainta
 This process manager will give us the possibility to start one or more process at
 a time in a Docker container. That's just what we need.
 
-So to add it to your images, you will find `TODO: Install S6` placeholders in
+So to add it to your images, you will find `TODO: [S6] Install` placeholders in
 the Docker images of [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile)
 
 Replace the `TODO` with the following Docker instruction:
@@ -257,28 +281,40 @@ or you can use the script to start two base containers:
   /vagrant/start-containers.sh
   ```
 
+You can check the state of your containers as we already did it in previous task with `docker ps` which should results with something like that:
+
+  ```
+  CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
+  2b277f0fe8da        softengheigvd/ha       "./run.sh"          21 seconds ago      Up 20 seconds       0.0.0.0:80->80/tcp, 0.0.0.0:1936->1936/tcp, 0.0.0.0:9999->9999/tcp   ha
+  0c7d8ff6562f        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s2
+  d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s1
+  ```
+
 **Remarks**:
 
   - If you have more than 2 backends, you will need to adapt these commands for
-the additional containers. Same for the script.
+    the additional containers. Same for the script.
 
   - You have better to train the Docker commands as the next tasks will require more and
     more of them. The scripts provided for the basics will no more be usable.
 
-    **References**:
+**References**:
 
-      - (docker run)[https://docs.docker.com/engine/reference/commandline/run/]
-      - (docker rm)[https://docs.docker.com/engine/reference/commandline/rm/]
+  - (docker ps)[https://docs.docker.com/engine/reference/commandline/ps/]
+  - (docker run)[https://docs.docker.com/engine/reference/commandline/run/]
+  - (docker rm)[https://docs.docker.com/engine/reference/commandline/rm/]
 
 We need to configure `S6` as our main process and then replace the current ones. For that
 we will update our Docker images [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile) and
-replace the: `TODO: Update this for S6` by the following Docker instruction:
+replace the: `TODO: [S6] Replace the following line` by the following Docker instruction:
 
   ```
   ENTRYPOINT ["/init"]
   ```
 
-**References**: (ENTRYPOINT)[https://docs.docker.com/engine/reference/builder/#/entrypoint]
+**References**:
+
+  - (ENTRYPOINT)[https://docs.docker.com/engine/reference/builder/#/entrypoint]
 
 You can build and run the updated images (use the commands already provided earlier). As you
 can observe if you try to go to http://192.168.42.42, there is nothing live.
@@ -295,8 +331,13 @@ Let's start by creating a folder called `service` in `ha` and `webapp` folders. 
 use the above commands:
 
   ```
-  mkdir /vagrant/ha/service/ha /vagrant/webapp/service/node
+  mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
   ```
+
+**Remarks**:
+
+  - `mkdir -p` will make directory recursively. If one is missing in the hierarchy,
+    it will be created. More info: `man mkdir`.
 
 You should have the following folders structure:
 
@@ -305,12 +346,12 @@ You should have the following folders structure:
     |-- ha
       |-- config
       |-- scripts
-      |-- service
+      |-- services
         |-- ha
       |-- Dockerfile
     |-- webapp
       |-- app
-      |-- service
+      |-- services
         |-- node
       |-- .dockerignore
       |-- Dockerfile
@@ -321,8 +362,8 @@ In each directory, create an executable file called `run`. You can achieve that
 by the following commands:
 
   ```
-  touch /vagrant/ha/service/ha/run && chmod +x /vagrant/ha/service/node/run
-  touch /vagrant/webapp/service/ha/run && chmod +x /vagrant/webapp/service/node/run
+  touch /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/node/run
+  touch /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
   ```
 
 **Remarks**:
@@ -334,7 +375,7 @@ by the following commands:
     of the commands, run: `man touch` or `man chmod`.
 
 Copy the content of the file [ha/scripts/run.sh](ha/scripts/run.sh) into the newly created
-file `ha/service/run`. Do the same for [webapp/run.sh](webapp/run.sh) into `webapp/service/run`.
+file `ha/services/run`. Do the same for [webapp/run.sh](webapp/run.sh) into `webapp/services/run`.
 
 Once copied, replace the hashbang instruction in both files. Replace `#!/bin/sh` by `#!/usr/bin/with-contenv sh`.
 This will instruct `S6` to give the environment variables from the container to the run script.
@@ -342,9 +383,48 @@ This will instruct `S6` to give the environment variables from the container to 
 The start scripts are ready but now we must copy them to the right place in the Docker image. In both
 `ha` and `webapp` Docker files, you need to add a `COPY` instruction to setup the service correctly.
 
-In `ha` Docker file, you need to replace: `TODO: Copy HA S6 run script` by `COPY service/ha /etc/services.d/ha`.
-Do the same in the `webapp`Docker file with the following replacement: `TODO: Copy node S6 run script` by `COPY service/node /etc/services.d/node`.
+In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two lines above` by
 
+  ```
+  COPY services/ha /etc/services.d/ha
+  RUN chmod +x /etc/services.d/ha/run
+  ```
+
+Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two lines above` by
+
+  ```
+  COPY services/node /etc/services.d/node
+  RUN chmod +x /etc/services.d/node/run
+  ```  
+
+**References**:
+
+  - (COPY)[https://docs.docker.com/engine/reference/builder/#/copy]
+  - (RUN)[https://docs.docker.com/engine/reference/builder/#/run]
+
+**Remarks**:
+
+  - We can discuss if is is really necessary to do `RUN chmod +x ...` in the image creation as we already
+    created the `run` files with `+x` rights. Doing so make sure that we will never have issue with copy/paste of
+    the file or transferring between unix world and windows world.
+
+Build again your images and run them. If everything is working fine, you should be able
+to open http://192.168.42.42 and see the same content as the previous task.
+
+** Deliverables **
+
+1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
+  should see your backend nodes. It should be probably really similar than the screenshot
+  of previous task
+
+2. Provide the Docker files in their updated form for this task
+
+3. Provide the run scripts used for `S6`
+
+4. Describe your difficulties for this task and your understanding of
+  what is happening during this task. Explain in your own words why are we
+  installing a process manager. Do not hesitate to do more researches and to
+  find more articles on that topic to illustrate the problem.
 
 
 
