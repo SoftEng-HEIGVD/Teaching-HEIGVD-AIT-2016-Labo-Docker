@@ -45,7 +45,7 @@ the lab report a structure that mimics the structure of this document.
 
     - Any git issue, ask us for help.
 
-** DISCLAIMER **: In this lab, we will go through a possible manner to manage a
+**DISCLAIMER**: In this lab, we will go through a possible manner to manage a
 scalable infrastructure where we can add and remove nodes without having to rebuild
 the HAProxy server. This is not the only one possibility to achieve such a goal.
 Doing some researches, you will find a lot of tools and services to achieve the
@@ -71,7 +71,7 @@ To fork the repo, just click on the `Fork` button in the GitHub interface.
 Once you have installed everything, start the Vagrant VM from the
 project folder with the following command:
 
-```bash
+```
 $ vagrant up
 ```
 
@@ -87,7 +87,7 @@ are load-balanced by HAProxy.
 The provisioning of the VM and the containers will take several
 minutes. You should see output similar to the following:
 
-```bash
+```
 $ vagrant up
 Bringing machine 'default' up with 'virtualbox' provider...
 ==> default: Importing base box 'phusion/ubuntu-14.04-amd64'...
@@ -108,18 +108,20 @@ There will be occasional error messages from `dpkg-preconfigure`,
 
 When deployment is finished you can log into the VM like so:
 
-    $ vagrant ssh
+`$ vagrant ssh`
 
 Once inside the VM you can list the running containers like so:
 
-    $ docker ps
+`$ docker ps`
 
 You should see output similar to the following:
 
-    CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
-    2b277f0fe8da        softengheigvd/ha       "./run.sh"          21 seconds ago      Up 20 seconds       0.0.0.0:80->80/tcp, 0.0.0.0:1936->1936/tcp, 0.0.0.0:9999->9999/tcp   ha
-    0c7d8ff6562f        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s2
-    d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s1
+```
+CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
+2b277f0fe8da        softengheigvd/ha       "./run.sh"          21 seconds ago      Up 20 seconds       0.0.0.0:80->80/tcp, 0.0.0.0:1936->1936/tcp, 0.0.0.0:9999->9999/tcp   ha
+0c7d8ff6562f        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s2
+d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s1
+```
 
 The two web app containers stand for two web servers. They run a
 NodeJS sample application that implements a simple REST API. Each
@@ -148,7 +150,7 @@ The app returns an HTTP response with a JSON payload that is designed
 to help you with testing and debugging. You should see output similar
 to the following:
 
-```json
+```
 {
   "hello": "world!",
   "ip": "172.17.0.7",
@@ -188,9 +190,7 @@ The fields have the following meaning:
 ### Task 1: Add a process manager to your images
 
 Actually, Docker has for some people a big limitation but it was designed as a core
-feature:
-
-  `One container == one process`
+feature: **One container == one process**
 
 In summary, this means that you should not be able to run multiple processes at the
 same time in a Docker container. But ???
@@ -224,34 +224,34 @@ the Docker images of [HAProxy](ha/Dockerfile) and the [web application](webapp/D
 
 Replace the `TODO` with the following Docker instruction:
 
-  ```
-  RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/releases/download/v1.17.2.0/s6-overlay-amd64.tar.gz \
-    && tar xzf /tmp/s6.tar.gz -C / \
-    && rm -f /tmp/s6.tar.gz
-  ```
+```
+RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/releases/download/v1.17.2.0/s6-overlay-amd64.tar.gz \
+  && tar xzf /tmp/s6.tar.gz -C / \
+  && rm -f /tmp/s6.tar.gz
+```
 
 To build your images, run the following commands inside your Vagrant VM instance:
 
-  ```
-  # Build the haproxy image
-  cd /vagrant/ha
-  sudo docker build -t softengheigvd/ha .
+```
+# Build the haproxy image
+cd /vagrant/ha
+sudo docker build -t softengheigvd/ha .
 
-  # Build the webapp image
-  cd /vagrant/webapp
-  sudo docker build -t softengheigvd/webapp .
-  ```
+# Build the webapp image
+cd /vagrant/webapp
+sudo docker build -t softengheigvd/webapp .
+```
 
 or use the script which do the same for you:
 
-  ```
-  /vagrant/build-images.sh
-  ```
+```
+/vagrant/build-images.sh
+```
 
 **References**:
 
-  - (RUN)[https://docs.docker.com/engine/reference/builder/#/run]
-  - (docker build)[https://docs.docker.com/engine/reference/commandline/build/]
+  - [RUN](https://docs.docker.com/engine/reference/builder/#/run)
+  - [docker build](https://docs.docker.com/engine/reference/commandline/build/)
 
 Ok, this part was the easiest one. We just installed one more stuff inside our image
 and now we need to do something with that.
@@ -263,32 +263,32 @@ anything for `S6` and we do not start it in the container.
 To run your images as containers, first you need to stop the current containers and remove
 them. You can do that with the following commands:
 
-  ```
-  # Stop and force to remove the containers
-  sudo docker rm -f s1
-  sudo docker rm -f s2
-  sudo docker rm -f ha
+```
+# Stop and force to remove the containers
+sudo docker rm -f s1
+sudo docker rm -f s2
+sudo docker rm -f ha
 
-  # Start the containers
-  sudo docker run -d --restart=always -e "TAG=s1" --name s1 softengheigvd/webapp
-  sudo docker run -d --restart=always -e "TAG=s2" --name s2 softengheigvd/webapp
-  sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
-  ```
+# Start the containers
+sudo docker run -d --restart=always -e "TAG=s1" --name s1 softengheigvd/webapp
+sudo docker run -d --restart=always -e "TAG=s2" --name s2 softengheigvd/webapp
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always -v /supervisor:/supervisor --link s1 --link s2 --name ha softengheigvd/ha
+```
 
 or you can use the script to start two base containers:
 
-  ```
-  /vagrant/start-containers.sh
-  ```
+```
+/vagrant/start-containers.sh
+```
 
 You can check the state of your containers as we already did it in previous task with `docker ps` which should results with something like that:
 
-  ```
-  CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
-  2b277f0fe8da        softengheigvd/ha       "./run.sh"          21 seconds ago      Up 20 seconds       0.0.0.0:80->80/tcp, 0.0.0.0:1936->1936/tcp, 0.0.0.0:9999->9999/tcp   ha
-  0c7d8ff6562f        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s2
-  d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s1
-  ```
+```
+CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
+2b277f0fe8da        softengheigvd/ha       "./run.sh"          21 seconds ago      Up 20 seconds       0.0.0.0:80->80/tcp, 0.0.0.0:1936->1936/tcp, 0.0.0.0:9999->9999/tcp   ha
+0c7d8ff6562f        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s2
+d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago      Up 21 seconds       3000/tcp                                                             s1
+```
 
 **Remarks**:
 
@@ -300,21 +300,21 @@ You can check the state of your containers as we already did it in previous task
 
 **References**:
 
-  - (docker ps)[https://docs.docker.com/engine/reference/commandline/ps/]
-  - (docker run)[https://docs.docker.com/engine/reference/commandline/run/]
-  - (docker rm)[https://docs.docker.com/engine/reference/commandline/rm/]
+  - [docker ps](https://docs.docker.com/engine/reference/commandline/ps/)
+  - [docker run](https://docs.docker.com/engine/reference/commandline/run/)
+  - [docker rm](https://docs.docker.com/engine/reference/commandline/rm/)
 
 We need to configure `S6` as our main process and then replace the current ones. For that
 we will update our Docker images [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile) and
 replace the: `TODO: [S6] Replace the following line` by the following Docker instruction:
 
-  ```
-  ENTRYPOINT ["/init"]
-  ```
+```
+ENTRYPOINT ["/init"]
+```
 
 **References**:
 
-  - (ENTRYPOINT)[https://docs.docker.com/engine/reference/builder/#/entrypoint]
+  - [ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#/entrypoint)
 
 You can build and run the updated images (use the commands already provided earlier). As you
 can observe if you try to go to http://192.168.42.42, there is nothing live.
@@ -330,9 +330,9 @@ our applications will be available again.
 Let's start by creating a folder called `service` in `ha` and `webapp` folders. You can
 use the above commands:
 
-  ```
-  mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
-  ```
+```
+mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
+```
 
 **Remarks**:
 
@@ -341,30 +341,30 @@ use the above commands:
 
 You should have the following folders structure:
 
-  ```
-  |-- Root directory
-    |-- ha
-      |-- config
-      |-- scripts
-      |-- services
-        |-- ha
-      |-- Dockerfile
-    |-- webapp
-      |-- app
-      |-- services
-        |-- node
-      |-- .dockerignore
-      |-- Dockerfile
-      |-- run.sh
-  ```
+```
+|-- Root directory
+  |-- ha
+    |-- config
+    |-- scripts
+    |-- services
+      |-- ha
+    |-- Dockerfile
+  |-- webapp
+    |-- app
+    |-- services
+      |-- node
+    |-- .dockerignore
+    |-- Dockerfile
+    |-- run.sh
+```
 
 In each directory, create an executable file called `run`. You can achieve that
 by the following commands:
 
-  ```
-  touch /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/node/run
-  touch /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
-  ```
+```
+touch /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/node/run
+touch /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
+```
 
 **Remarks**:
 
@@ -385,22 +385,22 @@ The start scripts are ready but now we must copy them to the right place in the 
 
 In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two lines above` by
 
-  ```
-  COPY services/ha /etc/services.d/ha
-  RUN chmod +x /etc/services.d/ha/run
-  ```
+```
+COPY services/ha /etc/services.d/ha
+RUN chmod +x /etc/services.d/ha/run
+```
 
 Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two lines above` by
 
-  ```
-  COPY services/node /etc/services.d/node
-  RUN chmod +x /etc/services.d/node/run
-  ```  
+```
+COPY services/node /etc/services.d/node
+RUN chmod +x /etc/services.d/node/run
+```  
 
 **References**:
 
-  - (COPY)[https://docs.docker.com/engine/reference/builder/#/copy]
-  - (RUN)[https://docs.docker.com/engine/reference/builder/#/run]
+  - [COPY](https://docs.docker.com/engine/reference/builder/#/copy)
+  - [RUN](https://docs.docker.com/engine/reference/builder/#/run)
 
 **Remarks**:
 
