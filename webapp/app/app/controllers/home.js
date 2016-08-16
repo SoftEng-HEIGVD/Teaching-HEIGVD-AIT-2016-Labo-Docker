@@ -31,7 +31,6 @@ router.get('/', function(req, res, next) {
     hello: 'world!',
     ip: process.env['SERVER_IP'],
     host: process.env['SERVER_NAME'],
-    tag: process.env['SERVER_TAG'],
     sessionViews: req.session.views,
     id: req.sessionID
   }).end();

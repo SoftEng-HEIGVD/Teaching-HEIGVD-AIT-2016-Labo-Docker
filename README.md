@@ -48,6 +48,10 @@ the lab report a structure that mimics the structure of this document.
   - It's really important to make each task in a separate branch. In doubts, ask us. No respect of
     this point will be penalized.
 
+  - The images and web application have been modified since the previous lab. The web app does
+    no more require a tag. An environment variable is defined in the Docker files to specify a
+    role for each image. We will see later how use that.
+
 **DISCLAIMER**: In this lab, we will go through a possible manner to manage a
 scalable infrastructure where we can add and remove nodes without having to rebuild
 the HAProxy server. This is not the only one possibility to achieve such a goal.
@@ -158,7 +162,6 @@ to the following:
   "hello": "world!",
   "ip": "172.17.0.7",
   "host": "2b277f0fe8da",
-  "tag": "s1",
   "sessionViews": 1,
   "id": "pdoSpuStaotzO4us2l_uYArG0w6S57eV"
 }
@@ -275,9 +278,9 @@ sudo docker rm -f s2
 sudo docker rm -f ha
 
 # Start the containers
-sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --name s1 softengheigvd/webapp
-sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --name s2 softengheigvd/webapp
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --link s1 --link s2 --name ha softengheigvd/ha
+sudo docker run -d --name s1 softengheigvd/webapp
+sudo docker run -d --name s2 softengheigvd/webapp
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 or you can use the script to start two base containers:
@@ -730,13 +733,13 @@ From now, to start our containers, we need to add the following argument to the 
 So to start the `ha` container the command become:
 
 ```
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --link s1 --link s2 --name ha softengheigvd/ha
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 And for the backend nodes:
 
 ```
-sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
+sudo docker run -d --network heig --name s1 softengheigvd/webapp
 ```
 
 **References**:
@@ -845,15 +848,15 @@ you to keep them for the report.
 Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
 
 ```
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --name ha softengheigvd/ha
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
 Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after
 started the container, capture also the logs of `ha` node (**keep the logs**).
 
 ```
-sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
-sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --network heig --name s2 softengheigvd/webapp
+sudo docker run -d --network heig --name s1 softengheigvd/webapp
+sudo docker run -d --network heig --name s2 softengheigvd/webapp
 ```
 
 **Remarks**:
@@ -1046,7 +1049,7 @@ cd /vagrant/ha
 sudo docker build -t softengheigvd/ha .
 
 # Run the HAProxy container
-sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --name ha softengheigvd/ha
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
 Take the time to retrieve the output file in the `ha` container. Connect to the container:
@@ -1067,7 +1070,7 @@ Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
 
 ```
 # 1) Run the S1 container
-sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
+sudo docker run -d --network heig --name s1 softengheigvd/webapp
 
 # 2) Connect to the ha container
 sudo docker exec -ti ha /bin/bash
@@ -1079,7 +1082,7 @@ cat /tmp/haproxy.cfg
 exit
 
 # 5) Rune the S2 container
-sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --network heig --name s2 softengheigvd/webapp
+sudo docker run -d --network heig --name s2 softengheigvd/webapp
 
 # 6) Connect to the ha container
 sudo docker exec -ti ha /bin/bash
