@@ -760,7 +760,6 @@ sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig
   details about the `GOSSIP` protocol used in `Serf`. Try to find other solutions
   that can be used to solve such situation where we need some auto-discovery mechanism.
 
-
 ### Task 3: Play with handler scripts
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
@@ -883,6 +882,10 @@ the running `ha` container. (**keep the logs**)
 cat /var/log/serf.log
 ```
 
+Once you have finished, you have simply to type `exit` in the container to quit
+your shell session and at the same time the container. The container itself will
+continue to run.
+
 **Deliverables**:
 
 1. Provides the first 50 lines of the logs of nodes `ha`, `s1` and `s2`. Give
@@ -893,17 +896,442 @@ cat /var/log/serf.log
 3. Provide the logs from `ha` container gathered directly from the `/var/log/serf.log`
   file present in the container.
 
+4. Try to reach your application through http://192.168.42.42. Illustrate your
+  test with a screenshot.
 
+5. Update the `member-join` and `member-leave` scripts (then rebuild your `ha` image)
+  to log also the role and name of the node that handle the events, in this case, the
+  `ha` container. Provide your updated scripts.
 
+  **hint**: Take a look in the documentation about the `Event handlers` on `Serf` official web site.
 
+### Task 4: Play with a template engine
 
+There are several ways to regenerate a configuration and to fill it with real values
+in a dynamic fashion. In this lab, we decided to use `NodeJS` and `Handlebars` for the
+template engine.
 
+According to Wikipedia:
 
+  > a template engine is a software designed to combine one or more templates
+    with a data model to produce one or more result documents
 
-# Install Node.js.
+In our case, our template is the `HAProxy` configuration file with the template engine
+language placeholders and the configuration is the resulted document after the processing
+done by the template engine. And finally, our data model is the data provided by the
+handlers scripts from `Serf`.
+
+**References**:
+
+  - [NodeJS](https://nodejs.org/en/)
+  - [Handlebars](http://handlebarsjs.com/)
+  - [Template Engine definition](https://en.wikipedia.org/wiki/Template_processor)
+
+To be able to use `Handlebars` as a template engine in our `ha` container, we need
+to install `NodeJS` and `Handlebars`.
+
+To install `NodeJS`, just replace `TODO: [HB] Install NodeJS` by the following content:
+
+```
 RUN curl -sSLo /tmp/node.tar.xz https://nodejs.org/dist/v4.4.4/node-v4.4.4-linux-x64.tar.xz \
-    && tar -C /usr/local --strip-components 1 -xf /tmp/node.tar.xz \
-&& rm -f /tmp/node.tar.xz
+  && tar -C /usr/local --strip-components 1 -xf /tmp/node.tar.xz \
+  && rm -f /tmp/node.tar.xz
+```
+
+We also need to update the base tools installed in the image to be able to extract the `NodeJS`
+archive. So we have to replace the `RUN` instruction above `TODO: [HB] Update to install required tool to install NodeJS`
+by the following one. It will add the `xz-utils` tool.
+
+```
+RUN apt-get update && apt-get -y install wget curl vim rsyslog xz-utils
+```
+
+**Remarks**:
+
+  - You probably noticed that we have the backend image with a `NodeJS` application.
+    So the image already contains `NodeJS`. We have based our backend image on an
+    existing image that provide an installation of `NodeJS`. In our `ha` image,
+    we take a shortcut and do a manual installation of `NodeJS` with at least one
+    bad practice.
+
+    In the original image of `NodeJS` the download the required files and then check
+    the downloads against `GPG` signatures. We have skipped this part in our `ha`
+    image but in practice, you should check everything you do to avoid issues like
+    `man in the middle`.
+
+    You can take a look to the following links if you want:
+
+      - [NodeJS official Dockerfile](https://github.com/nodejs/docker-node/blob/ae9e2d4f04a0fa82261df86fd9556a76cefc020d/6.3/wheezy/Dockerfile#L4-L26)
+      - [GPG](https://en.wikipedia.org/wiki/GNU_Privacy_Guard)
+      - [Man in the middle attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)
+
+    The other reason why we have to manually install `NodeJS` by hand is that we
+    cannot inherit from two images at the same time. As in our `ha` image, we already
+    come `FROM` the `haproxy` official image, then we cannot use the `NodeJS` at the same time.
+
+    In fact, the `FROM` instruction from Docker can be see like Java Inheritance model. You
+    can inherit only from one super class at a time. So, what we can imagine is the following:
+
+    ```
+    os base image <- haproxy <- node haproxy <- our custom proxy conf
+    ```
+
+    Where each stage is an image. Doing the things like that allow us to reuse our
+    own haproxy enriched with `NodeJS` capability in a different context. You can
+    take a look to the Docker doc:
+
+      - [FROM](https://docs.docker.com/engine/reference/builder/#/from)
+
+It's time to install `Handlebars` and a small command line util to make it working
+properly. For that, replace the `TODO: [HB] Install Handlebars and cli` by this
+Docker instruction:
+
+```
+RUN npm install -g handlebars-cmd
+```
+
+**Remarks**:
+
+  - [NPM](http://npmjs.org/) is a package manager for `NodeJS`. Like other package
+    manager, one of his tasks is to manage the dependencies of any package. That's
+    the reason why we have only to install `handlebars-cmd`. This package has
+    `handlebars` as its dependencies.
+
+Now we will update the handler scripts to use `Handlebars`. For the moment, we
+will just play with a simple template. So, first create a file in `ha/config` called
+`haproxy.cfg.hb` with the following content:
+
+```
+Container {{ name }} has joined the Serf cluster with the following IP address: {{ ip }}
+```
+
+We need our template present in our `ha` image. This time, the plumbing is already done
+for you. In fact, in the Docker file, we have `COPY config /config/` which will copy all
+the files present in the folder `ha/config` to `/config` in the image.
+
+Then, update the `member-join.sh` script in [ha/scripts](ha/scripts) with the following content:
+
+```
+#!/usr/bin/env bash
+
+echo "Member join script triggered" >> /var/log/serf.log
+
+# We iterate over stdin
+while read -a values; do
+  # We extract the hostname, the ip, the role of each line and the tags
+  HOSTNAME=${values[0]}
+  HOSTIP=${values[1]}
+  HOSTROLE=${values[2]}
+  HOSTTAGS=${values[3]}
+
+  echo "Member join event received from: $HOSTNAME with role $HOSTROLE" >> /var/log/serf.log
+
+  # Generate the output file based on the template with the parameters as input for placeholders
+  handlebars --name $HOSTNAME --ip $HOSTIP < /config/haproxy.cfg.hb > /tmp/haproxy.cfg
+done
+```
+
+<a name="ttb"></a>
+Time to build our `ha` image and to run it. We will also run `s1` and `s2`. As usual, there
+are the commands to build and run our image and containers:
+
+```
+# Remove running containers
+sudo docker rm -f ha
+sudo docker rm -f s1
+sudo docker rm -f s2
+
+# Build the haproxy image
+cd /vagrant/ha
+sudo docker build -t softengheigvd/ha .
+
+# Run the HAProxy container
+sudo docker run -d -e "ROLE=balancer" -p 80:80 -p 1936:1936 -p 9999:9999 --restart=always --network heig --name ha softengheigvd/ha
+```
+
+Take the time to retrieve the output file in the `ha` container. Connect to the container:
+
+```
+sudo docker exec -ti ha /bin/bash
+```
+
+and get the content from the file (keep it for deliverables)
+
+```
+cat /tmp/haproxy.cfg
+```
+
+And quit the container with `exit`.
+
+Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
+
+```
+# 1) Run the S1 container
+sudo docker run -d --restart=always -e "TAG=s1" -e "ROLE=backend" --network heig --name s1 softengheigvd/webapp
+
+# 2) Connect to the ha container
+sudo docker exec -ti ha /bin/bash
+
+# 3) From the container, extract the content (keep it for deliverables)
+cat /tmp/haproxy.cfg
+
+# 4) Quit the ha container
+exit
+
+# 5) Rune the S2 container
+sudo docker run -d --restart=always -e "TAG=s2" -e "ROLE=backend" --network heig --name s2 softengheigvd/webapp
+
+# 6) Connect to the ha container
+sudo docker exec -ti ha /bin/bash
+
+# 7) From the container, extract the content (keep it for deliverables)
+cat /tmp/haproxy.cfg
+
+# 8) Quit the ha container
+exit
+```
+
+**Deliverables**:
+
+1. You probably noticed when we added `xz-utils`, we have to rebuild the whole image
+  which took some time. What can we do to mitigate that? You can take a look on
+  the Docker documentation about the [image layers](https://docs.docker.com/engine/userguide/storagedriver/imagesandcontainers/#images-and-layers).
+  Tell us about the pros and cons to merge as much as possible of the command. In
+  fact, argument about:
+
+  ```
+  RUN command 1
+  RUN command 2
+  RUN command 3
+  ```
+
+  vs.
+
+  ```
+  RUN command 1 && command 2 && command 3
+  ```
+
+  There are also some articles about techniques to reduce the image size. Try to
+  find them. They are talking about `squashing` or `flattening` images.
+
+2. Give the branch for the current task
+
+3. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps
+
+4. Based on the three output files gathered, what can you tell about the way we
+  generate it?
+
+### Task 5: Generate the HAProxy config based on Serf events
+
+At this stage, we have:
+
+  - Two images with `S6` process manager that starts `Serf agent` and an
+    `Application` (HAProxy or Node app)
+
+  - The `ha` image contains the required stuff to react to `Serf` events when a
+    container join or leave the `Serf` cluster
+
+  - A template engine in `ha` image ready to used to generate the HAProxy configuration
+
+Now, we need to refine our `join` and `leave` scripts to generate a proper HAProxy
+configuration file.
+
+First, we will copy/paste the content of [ha/config/haproxy.cfg](ha/config/haproxy.cfg)
+file into [ha/config/haproxy.cfg.hb](ha/config/haproxy.cfg.hb). Then we will replace
+the content between `# HANDLEBARS START` and `# HANDLEBARS STOP` by the following
+content:
+
+```
+{{#each addresses}}
+server {{ host }} {{ ip }}:3000 check
+{{/each}}
+```
+
+**Remarks**:
+
+  - `each` iterates over a collection of data
+
+  - `{{` and `}}` are the bars that will be interpreted by `Handlebars`
+
+  - `host` and `ip` are the data contained in the JSON format of the collection
+    that handlebars will receive. We will see that right after in the `member-join.sh`
+    script. The JSON format will be: `{ "host": "<hostname>", "ip": "<ip address>" }`.
+
+Our configuration template is ready. Let's update the `member-join.sh` script to
+generate the correct configuration. In the file [ha/scripts/member-join.sh](ha/scripts/member-join.sh)
+replace the whole content by the following one. Take the time to read the comments.
+
+The mechanism in place to manage the `join` and `leave` events is the following:
+
+  1. We check if the event comes from a backend node (the role is used)
+
+  2. We create a file with the hostname and ip of each backend node that join the cluster
+
+  3. We build the handlebars command to generate the new configuration from the list
+    of files that represent our backend nodes
+
+The same logic also apply when a node leave the cluster. In this case, the second step
+will remove the file with the node data.
+
+```
+#!/usr/bin/env bash
+
+echo "Member join script triggered" >> /var/log/serf.log
+
+BACKEND_REGISTERED=false
+
+# We iterate over stdin
+while read -a values; do
+  # We extract the hostname, the ip, the role of each line and the tags
+  HOSTNAME=${values[0]}
+  HOSTIP=${values[1]}
+  HOSTROLE=${values[2]}
+  HOSTTAGS=${values[3]}
+
+  # We only register the backend nodes
+  if [[ "$HOSTROLE" == "backend" ]]; then
+    echo "Member join event received from: $HOSTNAME with role $HOSTROLE" >> /var/log/serf.log
+
+    # We simply register the backend IP and hostname in a file in /nodes
+    # with the hostname for the file name
+    echo "$HOSTNAME $HOSTIP" > /nodes/$HOSTNAME
+
+    # We have at least one new node registered
+    BACKEND_REGISTERED=true
+  fi
+done
+
+# We only update the HAProxy configuration if we have at least one new  backend node
+if [[ "$BACKEND_REGISTERED" = true ]]; then
+  # To build the collection of nodes
+  HOSTS=""
+
+  # We iterate over each backend node registered
+  for hostfile in $(ls /nodes); do
+    # We convert the content of the backend node file to a JSON format: { "host": "<hostname>", "ip": "<ip address>" }
+    CURRENT_HOST=`cat /nodes/$hostfile | awk '{ print "{\"host\":\"" $1 "\",\"ip\":\"" $2 "\"}" }'`
+
+    # We concatenate each host
+    HOSTS="$HOSTS$CURRENT_HOST,"
+  done
+
+  # We process the template with handlebars. The sed command will simply remove the
+  # trailing comma from the hosts list.
+  handlebars --addresses "[$(echo $HOSTS | sed s/,$//)]" < /config/haproxy.cfg.hb > /usr/local/etc/haproxy/haproxy.cfg
+fi
+```
+
+And here we go for the `member-leave.sh` script. The script differs only for the part where
+we remove the backend nodes registered via the `member-join.sh`.
+
+```
+#!/usr/bin/env bash
+
+echo "Member leave/join script triggered" >> /var/log/serf.log
+
+BACKEND_UNREGISTERED=false
+
+# We iterate over stdin
+while read -a values; do
+  # We extract the hostname, the ip, the role of each line and the tags
+  HOSTNAME=${values[0]}
+  HOSTIP=${values[1]}
+  HOSTROLE=${values[2]}
+  HOSTTAGS=${values[3]}
+
+  # We only remove the backend nodes
+  if [[ "$HOSTROLE" == "backend" ]]; then
+    echo "Member $SERF_EVENT event received from: $HOSTNAME with role $HOSTROLE" >> /var/log/serf.log
+
+    # We simply remove the file that was used to track the registered node
+    rm /nodes/$HOSTNAME
+
+    # We have at least one new node that leave the cluster
+    BACKEND_UNREGISTERED=true
+  fi
+done
+
+# We only update the HAProxy configuration if we have at least a backend that
+# left the cluster. The process to generate the HAProxy configuration is the
+# same than for the member-join script.
+if [[ "$BACKEND_UNREGISTERED" = true ]]; then
+  # To build the collection of nodes
+  HOSTS=""
+
+  # We iterate over each backend node registered
+  for hostfile in $(ls /nodes); do
+    # We convert the content of the backend node file to a JSON format: { "host": "<hostname>", "ip": "<ip address>" }
+    CURRENT_HOST=`cat /nodes/$hostfile | awk '{ print "{\"host\":\"" $1 "\",\"ip\":\"" $2 "\"}" }'`
+
+    # We concatenate each host
+    HOSTS="$HOSTS$CURRENT_HOST,"
+  done
+
+  # We process the template with handlebars. The sed command will simply remove the
+  # trailing comma from the hosts list.
+  handlebars --addresses "[$(echo $HOSTS | sed s/,$//)]" < /config/haproxy.cfg.hb > /usr/local/etc/haproxy/haproxy.cfg
+fi
+
+```
+
+**Remarks**:
+
+  - The way we keep track the backend nodes is pretty simple and make the assumption
+    there is no concurrency issue with `Serf`. That's reasonable enough to get a
+    quite simple solution.
+
+We need to make sure the image has the folder `/nodes` created. In the Docker file,
+replace the `TODO: [CFG] Create the nodes folder` by the following Docker instruction:
+
+```
+RUN mkdir /nodes
+```
+
+We are ready to build and test our `ha` image. Let's proceed the same as the [previous task](#ttb).
+You should keep track the same outputs for the deliverables. You will have to replace
+the file in the `cat` command.
+
+```
+cat /tmp/haproxy.cfg
+```
+
+becomes
+
+```
+cat /usr/local/etc/haproxy/haproxy.cfg
+```
+
+You can also get the list of registered nodes from inside the `ha` container. Run
+the following command to see the list of files that tracks the backend nodes:
+
+```
+ls /nodes
+```
+
+Stop one of the two containers with the following Docker command:
+
+```
+sudo docker stop s1
+```
+
+Now, you can connect again to the `ha` container and get the haproxy configuration
+file and also the list of backend nodes. Use the previous command to reach this goal.
+
+**Deliverables**:
+
+1. Give the branch for the current task
+
+2. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps
+
+3. Give the output of `ls /nodes` from inside the `ha` container.
+
+4. Give the configuration file after you stopped one container and the list of
+  nodes present in the `/nodes` folder.
+
+
+
+
+
 
 #### Lab due date
 
