@@ -1234,9 +1234,15 @@ Now, we need to refine our `join` and `leave` scripts to generate a proper HAPro
 configuration file.
 
 First, we will copy/paste the content of [ha/config/haproxy.cfg](ha/config/haproxy.cfg)
-file into [ha/config/haproxy.cfg.hb](ha/config/haproxy.cfg.hb). Then we will replace
-the content between `# HANDLEBARS START` and `# HANDLEBARS STOP` by the following
-content:
+file into [ha/config/haproxy.cfg.hb](ha/config/haproxy.cfg.hb). You can simply
+run the following command:
+
+```bash
+cp /vagrant/ha/config/haproxy.cfg /vagrant/ha/config/haproxy.cfg.hb
+```
+
+Then we will replace the content between `# HANDLEBARS START` and
+`# HANDLEBARS STOP` by the following content:
 
 ```
 {{#each addresses}}
@@ -1255,8 +1261,7 @@ server {{ host }} {{ ip }}:3000 check
     script. The JSON format will be: `{ "host": "<hostname>", "ip": "<ip address>" }`.
 
 Our configuration template is ready. Let's update the `member-join.sh` script to
-generate the correct configuration. In the file [ha/scripts/member-join.sh](ha/scripts/member-join.sh)
-replace the whole content by the following one. Take the time to read the comments.
+generate the correct configuration.
 
 The mechanism in place to manage the `join` and `leave` events is the following:
 
@@ -1270,7 +1275,10 @@ The mechanism in place to manage the `join` and `leave` events is the following:
 The same logic also apply when a node leave the cluster. In this case, the second step
 will remove the file with the node data.
 
-```
+In the file [ha/scripts/member-join.sh](ha/scripts/member-join.sh)
+replace the whole content by the following one. Take the time to read the comments.
+
+```bash
 #!/usr/bin/env bash
 
 echo "Member join script triggered" >> /var/log/serf.log
@@ -1315,13 +1323,15 @@ if [[ "$BACKEND_REGISTERED" = true ]]; then
   # We process the template with handlebars. The sed command will simply remove the
   # trailing comma from the hosts list.
   handlebars --addresses "[$(echo $HOSTS | sed s/,$//)]" < /config/haproxy.cfg.hb > /usr/local/etc/haproxy/haproxy.cfg
+
+  # TODO: [CFG] Add the command to restart HAProxy
 fi
 ```
 
 And here we go for the `member-leave.sh` script. The script differs only for the part where
 we remove the backend nodes registered via the `member-join.sh`.
 
-```
+```bash
 #!/usr/bin/env bash
 
 echo "Member leave/join script triggered" >> /var/log/serf.log
@@ -1367,8 +1377,9 @@ if [[ "$BACKEND_UNREGISTERED" = true ]]; then
   # We process the template with handlebars. The sed command will simply remove the
   # trailing comma from the hosts list.
   handlebars --addresses "[$(echo $HOSTS | sed s/,$//)]" < /config/haproxy.cfg.hb > /usr/local/etc/haproxy/haproxy.cfg
-fi
 
+  # TODO: [CFG] Add the command to restart HAProxy
+fi
 ```
 
 **Remarks**:
@@ -1377,45 +1388,56 @@ fi
     there is no concurrency issue with `Serf`. That's reasonable enough to get a
     quite simple solution.
 
+**Cleanup**:
+
+  - In the main configuration file that is used for bootstrap HAProxy the first time
+    when there is no backend nodes, we have the list of servers that we used in the first
+    task and the previous lab. We can remove the list. So find `TODO: [CFG] Remove all the servers`
+    and remove the list of nodes.
+
+  - In [ha/services/ha/run](ha/services/ha/run), we can remove the two lines
+    above `TODO: [CFG] Remove the following two lines`.
+
 We need to make sure the image has the folder `/nodes` created. In the Docker file,
 replace the `TODO: [CFG] Create the nodes folder` by the following Docker instruction:
 
 ```
+# Create the folder that will track the backend nodes
 RUN mkdir /nodes
 ```
-
-And we can do a little bit of cleanup in some files. In [ha/services/ha/run](ha/services/ha/run), you can
-remove the two lines above `TODO: [CFG] Remove the following two lines`.
 
 We are ready to build and test our `ha` image. Let's proceed the same as the [previous task](#ttb).
 You should keep track the same outputs for the deliverables. You will have to replace
 the file in the `cat` command.
 
-```
+```bash
 cat /tmp/haproxy.cfg
 ```
 
-becomes
+becomes (**keep track of the config file like in previous step**)
 
-```
+```bash
 cat /usr/local/etc/haproxy/haproxy.cfg
 ```
 
 You can also get the list of registered nodes from inside the `ha` container. Run
-the following command to see the list of files that tracks the backend nodes:
+the following command to see the list of files that tracks the backend nodes.
+(**keep track of the output of the command like the logs in previous tasks**)
 
-```
+```bash
 ls /nodes
 ```
 
 Stop one of the two containers with the following Docker command:
 
-```
+```bash
 docker stop s1
 ```
 
 Now, you can connect again to the `ha` container and get the haproxy configuration
 file and also the list of backend nodes. Use the previous command to reach this goal.
+(**keep track of the output of the ls command and the configuration file
+like the logs in previous tasks**)
 
 **Deliverables**:
 
@@ -1440,7 +1462,7 @@ We will try to make HAProxy reload his config with the minimal downtime. At the 
 we will replace `TODO: [CFG] Replace this command` in [ha/services/ha/run](ha/services/ha/run)
 by the following script part. As usual, take the time to read the comments.
 
-```
+```bash
 # Get the current process ID to avoid killing an unwanted process
 pid=$$
 
@@ -1495,7 +1517,7 @@ We need to update our `member-join` and `member-leave` scripts to make sure HAPr
 will be restarted when its configuration is modified. For that, in both files, replace
 `TODO: [CFG] Add the command to restart HAProxy` by the following command.
 
-```
+```bash
 # Send a SIGHUP to the process. It will restart HAProxy
 s6-svc -h /var/run/s6/services/ha
 ```
@@ -1506,11 +1528,9 @@ s6-svc -h /var/run/s6/services/ha
 
 It's time to build and run our images. Again, you can simply use the following instructions:
 
-```
+```bash
 # Force remove the three containers
-docker rm -f ha
-docker rm -f s1
-docker rm -f s2
+docker rm -f ha s1 s2
 
 # Build the haproxy image
 cd /vagrant/ha
@@ -1523,7 +1543,7 @@ docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha soften
 At this stage, if you try to reach `http://192.168.42.42`, it will not work. No surprise as
 we do not start any backend node. Let's start one container and try to reach the same URL.
 
-```
+```bash
 # Start one backend node
 docker run -d --network heig --name s1 softengheigvd/webapp
 ```
@@ -1531,7 +1551,7 @@ docker run -d --network heig --name s1 softengheigvd/webapp
 If everything works well, you could reach your backend application through the
 load balancer. And now we start a two more backend nodes.
 
-```
+```bash
 # Start second backend node
 docker run -d --network heig --name s2 softengheigvd/webapp
 
@@ -1551,7 +1571,7 @@ take a little time.
   to do the things differently. If any, provides the links of your readings for
   the improvements.
 
-3. A live demo where you add and remove a backend container.
+3. Present a live demo where you add and remove a backend container.
 
 #### Lab due date
 
