@@ -6,7 +6,7 @@ title: Lab ? - Docker
 
 #### Pedagogical objectives
 
-* Reuse part of a previous labo concepts about the load balancing
+* Reuse part of a previous lab concepts about the load balancing
 
 * Build your own Docker images
 
@@ -51,6 +51,19 @@ the lab report a structure that mimics the structure of this document.
   - The images and web application have been modified since the previous lab. The web app does
     no more require a tag. An environment variable is defined in the Docker files to specify a
     role for each image. We will see later how use that.
+
+  - We expect, at least, in your report to see:
+
+    - An introduction describing briefly the lab
+
+    - 6 chapters, one for each task
+
+    - A table of content
+
+    - If any, difficulties chapter where you will describe the problems and
+      solutions you have encountered
+
+    - A Conclusion
 
 **DISCLAIMER**: In this lab, we will go through a possible manner to manage a
 scalable infrastructure where we can add and remove nodes without having to rebuild
@@ -824,9 +837,9 @@ RUN chmod +x /serf-handlers/*.sh
 Stop all your containers to have a fresh state:
 
 ```
+sudo docker rm -f ha
 sudo docker rm -f s1
 sudo docker rm -f s2
-sudo docker rm -f ha
 ```
 
 Now, build you images:
@@ -1290,6 +1303,9 @@ replace the `TODO: [CFG] Create the nodes folder` by the following Docker instru
 RUN mkdir /nodes
 ```
 
+And we can do a little bit of cleanup in some files. In [ha/services/ha/run](ha/services/ha/run), you can
+remove the two lines above `TODO: [CFG] Remove the following two lines`.
+
 We are ready to build and test our `ha` image. Let's proceed the same as the [previous task](#ttb).
 You should keep track the same outputs for the deliverables. You will have to replace
 the file in the `cat` command.
@@ -1331,10 +1347,130 @@ file and also the list of backend nodes. Use the previous command to reach this 
 4. Give the configuration file after you stopped one container and the list of
   nodes present in the `/nodes` folder.
 
+5. Propose a different approach to manage the list of backend nodes. You do
+  not need to implement it.
 
+### Task 6: Make everything working like a charm
 
+We have all the pieces ready to work and we just need to make sure the configuration
+of HAProxy is up-to-date and taken into account by HAProxy.
 
+We will try to make HAProxy reload his config with the minimal downtime. At the moment,
+we will replace `TODO: [CFG] Replace this command` in [ha/services/ha/run](ha/services/ha/run)
+by the following script part. As usual, take the time to read the comments.
 
+```
+# Get the current process ID to avoid killing an unwanted process
+pid=$$
+
+# Define a function to stop gracefully HAProxy
+sigterm() {
+  kill -USR1 $pid
+}
+
+# Trap the SIGTERM and in place run the function that will kill the process
+trap sigterm SIGTERM
+
+# Retrieve the PID value from
+if [ -f /var/run/haproxy.pid ]; then
+    HANDOFFPID=`cat /var/run/haproxy.pid`
+fi
+
+# In general, old applications are not designed to run through a process manager
+# out of the box. That's the reason to do some tricks to catch manually the PID
+# of the process and to manage manually the way we start/stop the process.
+#
+# In this case, the idea is to get the PID of HAProxy before we start it. If there
+# is a PID, then it means for HAProxy a restart. In fact, HAProxy will start a new
+# process with a different PID from the one we retrieved and once the new process
+# is ready, the previous one is stopped.
+exec haproxy -f /usr/local/etc/haproxy/haproxy.cfg -sf $HANDOFFPID &
+
+# Then, we store the new PID
+pid=$!
+
+# And write it a file to get it on next restart
+echo $pid > /var/run/haproxy.pid
+
+# Finally, we wait as S6 launch this shell script. This will simulate
+# a foreground process for S6. All that tricky stuff is required because
+# we use a process manager in a Docker environment. The applications need
+# to be adapted for such environments.
+wait
+```
+
+**Remarks**:
+
+  - In this lab, we will not do a real zero downtime (or nearly) HAProxy
+    restart. You will find an article about that in the references.
+
+**References**:
+
+  - [Stopping HAProxy](http://cbonte.github.io/haproxy-dconv/1.6/management.html#4)
+  - [Sending signal to Processes](https://bash.cyberciti.biz/guide/Sending_signal_to_Processes)
+  - [Zero downtime with HAProxy article](http://engineeringblog.yelp.com/2015/04/true-zero-downtime-haproxy-reloads.html)
+
+We need to update our `member-join` and `member-leave` scripts to make sure HAProxy
+will be restarted when its configuration is modified. For that, in both files, replace
+`TODO: [CFG] Add the command to restart HAProxy` by the following command.
+
+```
+# Send a SIGHUP to the process. It will restart HAProxy
+s6-svc -h /var/run/s6/services/ha
+```
+
+**References**:
+
+  - [S6 svc doc](http://skarnet.org/software/s6/s6-svc.html)
+
+It's time to build and run our images. Again, you can simply use the following instructions:
+
+```
+# Force remove the three containers
+sudo docker rm -f ha
+sudo docker rm -f s1
+sudo docker rm -f s2
+
+# Build the haproxy image
+cd /vagrant/ha
+sudo docker build -t softengheigvd/ha .
+
+# Start ha container
+sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
+```
+
+At this stage, if you try to reach `http://192.168.42.42`, it will not work. No surprise as
+we do not start any backend node. Let's start one container and try to reach the same URL.
+
+```
+# Start one backend node
+sudo docker run -d --network heig --name s1 softengheigvd/webapp
+```
+
+If everything works well, you could reach your backend application through the
+load balancer. And now we start a two more backend nodes.
+
+```
+# Start second backend node
+sudo docker run -d --network heig --name s2 softengheigvd/webapp
+
+# Start third backend node
+sudo docker run -d --network heig --name s3 softengheigvd/webapp
+```
+
+This time, you can see the round robin balancing. It can take few seconds before
+the second node become available. The HAProxy need to restart and this process
+take a little time.
+
+**Deliverables**:
+
+1. Take a screenshot of the HAProxy stat page.
+
+2. Give your own feelings about the final solution. Propose improvements or ways
+  to do the things differently. If any, provides the links of your readings for
+  the improvements.
+
+3. A live demo where you add and remove a backend container.
 
 #### Lab due date
 
