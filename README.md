@@ -503,7 +503,7 @@ our application processes and `Serf` processes.
 
 To start `Serf`, we need to create the proper service for `S6`. Let's do that with
 the creation of the service folder in `ha/services` and `webapp/services`. Use the
-following command to do that.
+following command to do that (run this command in your Vagrant VM).
 
 ```
 mkdir /vagrant/ha/services/serf /vagrant/webapp/services/serf
@@ -546,7 +546,7 @@ and ask us fore more info if you want.
 The principal part between `SERF START` and `SERF END` is the command we prepare
 to run the serf agent.
 
-```
+```bash
 #!/usr/bin/with-contenv bash
 
 # WARNING: The tricky part in this script is the way we manage the process of Serf. We
