@@ -323,7 +323,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
   - [docker rm](https://docs.docker.com/engine/reference/commandline/rm/)
 
 We need to configure `S6` as our main process and then replace the current ones. For that
-we will update our Docker images [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile) and
+we will update our Docker images [HAProxy](ha/Dockerfile#L11) and the [web application](webapp/Dockerfile#L16) and
 replace the: `TODO: [S6] Replace the following instruction` by the following Docker instruction:
 
 ```
@@ -347,7 +347,7 @@ them at the right place. Once done, they will be automatically taken into accoun
 our applications will be available again.
 
 Let's start by creating a folder called `service` in `ha` and `webapp` folders. You can
-use the above commands:
+use the above commands (do this command in your Vagrant VM):
 
 ```
 mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
@@ -377,26 +377,23 @@ You should have the following folders structure:
     |-- run.sh
 ```
 
-In each directory, create an executable file called `run`. You can achieve that
-by the following commands:
+We need to copy the `run.sh` scripts as `run` files in the service directories.
+You can achieve that by the following commands (do these commands in your Vagrant VM):
 
 ```
-touch /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/ha/run
-touch /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
+cp /vagrant/ha/scripts/run.sh /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/ha/run
+cp /vagrant/webapp/scripts/run.sh /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
 ```
 
 **Remarks**:
 
-  - The `&&` in the previous command mean: if `touch` command return RC == 0 then
+  - The `&&` in the previous command mean: if `cp` command return RC == 0 then
     do command `chmod`.
 
-  - `touch` will create the file and `chmod` will make it executable. For more info
+  - `cp` will copy the file and `chmod` will make it executable. For more info
     of the commands, run: `man touch` or `man chmod`.
 
-Copy the content of the file [ha/scripts/run.sh](ha/scripts/run.sh) into the newly created
-file `ha/services/run`. Do the same for [webapp/run.sh](webapp/run.sh) into `webapp/services/run`.
-
-Once copied, replace the hashbang instruction in both files. Replace `#!/bin/sh` by `#!/usr/bin/with-contenv sh`.
+Once copied, replace the hashbang instruction in both files. Replace `#!/bin/sh` by `#!/usr/bin/with-contenv bash`.
 This will instruct `S6` to give the environment variables from the container to the run script.
 
 The start scripts are ready but now we must copy them to the right place in the Docker image. In both
@@ -413,6 +410,7 @@ RUN chmod +x /etc/services.d/ha/run
 Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two following instructions` by
 
 ```
+# Copy the S6 service and make the run script executable
 COPY services/node /etc/services.d/node
 RUN chmod +x /etc/services.d/node/run
 ```  
@@ -424,14 +422,15 @@ RUN chmod +x /etc/services.d/node/run
 
 **Remarks**:
 
-  - We can discuss if is is really necessary to do `RUN chmod +x ...` in the image creation as we already
-    created the `run` files with `+x` rights. Doing so make sure that we will never have issue with copy/paste of
-    the file or transferring between unix world and windows world.
+  - We can discuss if is is really necessary to do `RUN chmod +x ...` in the
+    image creation as we already created the `run` files with `+x` rights. Doing
+    so make sure that we will never have issue with copy/paste of the file or
+    transferring between unix world and windows world.
 
 Build again your images and run them. If everything is working fine, you should be able
 to open http://192.168.42.42 and see the same content as the previous task.
 
-** Deliverables **
+**Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
   should see your backend nodes. It should be probably really similar than the screenshot
@@ -439,11 +438,7 @@ to open http://192.168.42.42 and see the same content as the previous task.
 
 2. Give the name of the branch you do your current task
 
-3. Provide the Docker files in their updated form for this task
-
-4. Provide the run scripts used for `S6`
-
-5. Describe your difficulties for this task and your understanding of
+3. Describe your difficulties for this task and your understanding of
   what is happening during this task. Explain in your own words why are we
   installing a process manager. Do not hesitate to do more researches and to
   find more articles on that topic to illustrate the problem.
@@ -472,8 +467,9 @@ On the paper, the things seems quite clear and easy but to achieve everything, i
 steps to be ready. So we will start by installing `Serf` and see how it is working with simple events
 and triggers.
 
-To install `Serf`, we have to add the following Docker instruction in the `ha` and `webapp` Docker
-files. Replace the `TODO: [Serf] Install` in [ha/Dockerfile](ha/Dockerfile) and [webapp/Dockerfile](webapp/Dockerfile)
+To install `Serf`, we have to add the following Docker instruction in the `ha`
+and `webapp` Docker files. Replace the `TODO: [Serf] Install` in
+[ha/Dockerfile](ha/Dockerfile#L13) and [webapp/Dockerfile](webapp/Dockerfile#L18)
 with the following instruction:
 
 ```
