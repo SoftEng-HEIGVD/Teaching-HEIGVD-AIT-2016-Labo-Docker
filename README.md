@@ -90,7 +90,7 @@ To fork the repo, just click on the `Fork` button in the GitHub interface.
 Once you have installed everything, start the Vagrant VM from the
 project folder with the following command:
 
-```
+```bash
 $ vagrant up
 ```
 
@@ -127,11 +127,15 @@ There will be occasional error messages from `dpkg-preconfigure`,
 
 When deployment is finished you can log into the VM like so:
 
-`$ vagrant ssh`
+```
+$ vagrant ssh
+```
 
 Once inside the VM you can list the running containers like so:
 
-`$ docker ps`
+```
+$ docker ps
+```
 
 You should see output similar to the following:
 
@@ -197,7 +201,7 @@ The fields have the following meaning:
   find that same session id embedded in the session cookie that is
   sent to the client.
 
-** Deliverables **
+**Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
   should see your backend nodes.
@@ -606,8 +610,8 @@ node but as we are in a decentralized architecture, it can be any of the nodes w
 a `Serf` agent.
 
 For example, if we start `ha` first, then `s2` and finally `s1`, we can imagine
-that `ha` will connect serf to itself as it is the first one. Then, `s2` will
-reference to `ha` to be in the same cluster and finally `s1` can reference `s1`.
+that `ha` will connect to itself as it is the first one. Then, `s2` will
+reference to `ha` to be in the same cluster and finally `s1` can reference `s2`.
 Therefore, `s1` will join the same cluster than `s2` and `ha` but through `s2`.
 
 For simplicity, all our nodes will register to the same cluster trough the `ha`
@@ -619,10 +623,14 @@ node.
 
 **Remarks**:
 
-  - Once the cluster is up, if `ha` node leave the cluster, it will not be a real
-    issue. The cluster will continue to exist. In the deliverables, describe which
+  - Once the cluster is created in `Serf` agent, the first node which created
+    the `Serf` cluster can leave the cluster. In fact, leaving the cluster will
+    not stop it as far as the `Serf` agent is running.
+
+    Anyway, in our current solution, there is kind of missconception around the
+    way we create the `Serf` cluster. In the deliverables, describe which
     problem exists with the current solution based on the previous explanations and
-    remarks.
+    remarks. Propose a solution to solve the issue.
 
 To make sure that `ha` load balancer can leave and enter the cluster again, we add
 the `--replay` option. This will allow to replay the past events and then react to
@@ -640,17 +648,21 @@ Then we append the event handlers to react to some events.
 --event-handler member-leave,member-failed=/serf-handlers/member-leave.sh
 ```
 
-At the moment the `member-add` and `member-remove` scripts are missing. We will add
+At the moment the `member-join` and `member-leave` scripts are missing. We will add
 them in a moment. These two scripts will manage the load balancer configuration.
 
 And finally, we set a tag `role=<rolename>` to our load balancer. The `$ROLE` is
-an environment variable that will be given from Docker `run` command through `-e "ROLE=balancer"`
-in this case. This will let us the possibility to make the difference between our
-backend nodes and our load balancer later in the scripts.
+the environment variable that we have in the Docker files. With the role, we will
+be able to make the difference between the `balancer` and the `backend` nodes.
 
 ```
 --tag role=$ROLE
 ```
+
+In fact, each node that will join or leave the `Serf` cluster will trigger a `join`,
+respectively `leave` events. It means that the handler scripts on the `ha` node
+will be called for all the nodes included itself. We want to avoid reconfiguring
+`ha` proxy when itself `join` or `leave` the `Serf` cluster.
 
 **References**:
 
@@ -670,16 +682,19 @@ COMMAND="$COMMAND --join serf-cluster"
 COMMAND="$COMMAND --tag role=$ROLE"
 ```
 
-This time, we do not need to have event handlers for the backend nodes. The backend nodes
-will just appear and disappear at some point in the time and nothing else. The `$ROLE` is also
-replaced by the `-e "ROLE=backend"` from Docker `run` command.
+This time, we do not need to have event handlers for the backend nodes. The
+backend nodes will just appear and disappear at some point in the time and
+nothing else. The `$ROLE` is also replaced by the `-e "ROLE=backend"` from
+Docker `run` command.
 
 Again, we need to update our Docker images to add the `Serf` service to `S6`.
 
-In both Docker image files in [ha](ha) and [webapp](webapp) folders, replace `TODO: [Serf] Add Serf S6 setup`
-by the following two Docker instructions:
+In both Docker image files in [ha](ha) and [webapp](webapp) folders,
+replace `TODO: [Serf] Add Serf S6 setup` by the following two Docker
+instructions:
 
 ```
+# Copy the Serf S6 run script and make it executable
 COPY services/serf/ /etc/services.d/serf
 RUN chmod +x /etc/services/serf/run
 ```
@@ -688,6 +703,7 @@ And finally, you can expose the `Serf` ports through your Docker image files. Re
 the `TODO: [Serf] Expose ports` by the following content:
 
 ```
+# Expose the ports for Serf
 EXPOSE 7946 7373
 ```
 
