@@ -256,7 +256,7 @@ This process manager will give us the possibility to start one or more process a
 a time in a Docker container. That's just what we need.
 
 So to add it to your images, you will find `TODO: [S6] Install` placeholders in
-the Docker images of [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile)
+the Docker images of [HAProxy](ha/Dockerfile#L11) and the [web application](webapp/Dockerfile#L16)
 
 Replace the `TODO: [S6] Install` with the following Docker instruction:
 
@@ -338,7 +338,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
   - [docker rm](https://docs.docker.com/engine/reference/commandline/rm/)
 
 We need to configure `S6` as our main process and then replace the current ones. For that
-we will update our Docker images [HAProxy](ha/Dockerfile#L11) and the [web application](webapp/Dockerfile#L16) and
+we will update our Docker images [HAProxy](ha/Dockerfile#L47) and the [web application](webapp/Dockerfile#L38) and
 replace the: `TODO: [S6] Replace the following instruction` by the following Docker instruction:
 
 ```
