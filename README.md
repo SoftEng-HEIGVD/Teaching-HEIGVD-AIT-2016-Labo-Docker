@@ -17,6 +17,9 @@ progress in a lab report. Each task specifies one or more deliverables
 to be produced.  Collect all the deliverables in your lab report. Give
 the lab report a structure that mimics the structure of this document.
 
+We expect to have in your repository (you will get the instructions later for that)
+a folder called `report` and a folder called `logs`.
+
 **Remark**:
 
   - Use the Task numbers and question numbers in reference in your report.
@@ -695,8 +698,8 @@ instructions:
 
 ```
 # Copy the Serf S6 run script and make it executable
-COPY services/serf/ /etc/services.d/serf
-RUN chmod +x /etc/services/serf/run
+COPY services/serf /etc/services.d/serf
+RUN chmod +x /etc/services.d/serf/run
 ```
 
 And finally, you can expose the `Serf` ports through your Docker image files. Replace
@@ -744,6 +747,12 @@ need to create our own Docker network. For that, we will use the following comma
 sudo docker network create --driver bridge heig
 ```
 
+Stop all your containers:
+
+```
+sudo docker rm -f ha s1 s2
+```
+
 If you want to know more about Docker networking, take the time to read the different
 pages in the references. Docker team provide a good overview and lot of details about
 this important topic.
@@ -766,6 +775,22 @@ And for the backend nodes:
 sudo docker run -d --network heig --name s1 softengheigvd/webapp
 ```
 
+**Remarks**:
+
+  - When we reach this point, we have a problem. If we start the HAProxy first,
+    it will not start as the two `s1` and `s2` containers are not started and we
+    try to link them through the Docker `run` command.
+
+    You can try and get the logs. You will see error logs where `s1` and `s2`
+
+    If we start `s1` and `s2` nodes before `ha`, we will have an error from `Serf`.
+    They try to connect the `Serf` cluster via `ha` container which is not running.
+
+    So the reverse proxy is not working but what we can do at least is to start
+    the containers beginning by `ha` and then backend nodes. It will make the `Serf`
+    part working and that's what we are working on at the moment and in the next
+    task.
+
 **References**:
 
   - [docker network create](https://docs.docker.com/engine/reference/commandline/network_create/)
@@ -775,15 +800,25 @@ sudo docker run -d --network heig --name s1 softengheigvd/webapp
 
 **Deliverables**:
 
-1. Provides the first 50 lines of docker logs output for each of the containers:  `ha`, `s1` and `s2`
+1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`. You need to
+  create a folder logs in your repository to track the files aside the report. Create a folder
+  per task for the logs and name it from the task number. No need to create folder when no logs.
+
+  Example:
+
+  ```
+  |-- root folder
+    |-- logs
+      |-- task 1
+      |-- task 3
+      |-- ...
+  ```
 
 2. Give the name of the branch for the current task
 
-3. Give the Docker files updated
+3. Give the answer to the question about the existing problem with the current solution
 
-4. Give the answer to the question about the existing problem with the current solution
-
-5. Give an explanation on how `Serf` is working. Read the official website to get more
+4. Give an explanation on how `Serf` is working. Read the official website to get more
   details about the `GOSSIP` protocol used in `Serf`. Try to find other solutions
   that can be used to solve such situation where we need some auto-discovery mechanism.
 
@@ -791,7 +826,7 @@ sudo docker run -d --network heig --name s1 softengheigvd/webapp
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
 really dynamic. At the moment, we are missing the scripts that will manage the events
-of serf and then react to member leave or member join.
+of `Serf` and then react to member `leave` or member `join`.
 
 We will start by creating the scripts in [ha/scripts](ha/scripts). So create two files in
 this directory and set them as executable. You can use these commands:
@@ -806,6 +841,8 @@ In the `member-join.sh` script, put the following content:
 ```
 #!/usr/bin/env bash
 
+echo "Member join script triggered" >> /var/log/serf.log
+
 # We iterate over stdin
 while read -a values; do
   # We extract the hostname, the ip, the role of each line and the tags
@@ -814,7 +851,7 @@ while read -a values; do
   HOSTROLE=${values[2]}
   HOSTTAGS=${values[3]}
 
-  echo "Member join event received from: $HOSTNAME with role $HOSTROLE"
+  echo "Member join event received from: $HOSTNAME with role $HOSTROLE" >> /var/log/serf.log
 done
 ```
 
@@ -823,6 +860,8 @@ Do the same for the `member-leave.sh` with the following content:
 ```
 #!/usr/bin/env bash
 
+echo "Member leave/join script triggered" >> /var/log/serf.log
+
 # We iterate over stdin
 while read -a values; do
   # We extract the hostname, the ip, the role of each line and the tags
@@ -831,7 +870,7 @@ while read -a values; do
   HOSTROLE=${values[2]}
   HOSTTAGS=${values[3]}
 
-  echo "Member $SERF_EVENT event received from: $HOSTNAME with role $HOSTROLE"
+  echo "Member $SERF_EVENT event received from: $HOSTNAME with role $HOSTROLE" >> /var/log/serf.log
 done
 ```
 
@@ -839,6 +878,7 @@ We have to update our Docker file for `ha` node. Let's replace the
 `TODO: [Serf] Copy events handler scripts` by the following content:
 
 ```
+# Create the handlers directory, copy the handler scripts and make them executable
 RUN mkdir /serf-handlers
 COPY scripts/member-join.sh /serf-handlers
 COPY scripts/member-leave.sh /serf-handlers
@@ -848,21 +888,15 @@ RUN chmod +x /serf-handlers/*.sh
 Stop all your containers to have a fresh state:
 
 ```
-sudo docker rm -f ha
-sudo docker rm -f s1
-sudo docker rm -f s2
+sudo docker rm -f ha s1 s2
 ```
 
-Now, build you images:
+Now, build your `ha` image:
 
 ```
 # Build the haproxy image
 cd /vagrant/ha
 sudo docker build -t softengheigvd/ha .
-
-# Build the webapp image
-cd /vagrant/webapp
-sudo docker build -t softengheigvd/webapp .
 ```
 
 From there, you will be notified when you need to keep track of the logs. The logs
@@ -885,14 +919,17 @@ sudo docker run -d --network heig --name s2 softengheigvd/webapp
 
 **Remarks**:
 
-  - You probably noticed that we removed the `links` to container `s1` and `s2`. We will explain that later.
+  - You probably noticed that we removed the `links` to container `s1` and `s2`.
+    In few words, we will not rely on that mechanism for the next steps and for
+    the moment, the communication between the reverse proxy and the backend
+    nodes is broken.
 
 Once started, get the logs (**keep the logs**) of the backend container.
 
-To check there is something happening on the node `ha`, you will need to connect to
-the running container to gather the custom log file that is created in the handler scripts.
-
-For that, use the following command to connect to `ha` container in interactive mode.
+To check there is something happening on the node `ha`, you will need to connect
+to the running container to gather the custom log file that is created in the
+handler scripts. For that, use the following command to connect to `ha`
+container in interactive mode.
 
 ```
 sudo docker exec -ti ha /bin/bash
@@ -915,20 +952,17 @@ continue to run.
 
 **Deliverables**:
 
-1. Provides the first 50 lines of the logs of nodes `ha`, `s1` and `s2`. Give
-  the logs for each step where it was asked for.
+1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`.
+  Put your logs in the logs folder you created in the previous task.
 
 2. Give the branch name of the current task
 
 3. Provide the logs from `ha` container gathered directly from the `/var/log/serf.log`
-  file present in the container.
+  file present in the container. Put the logs in the logs directory in your repo.
 
-4. Try to reach your application through http://192.168.42.42. Illustrate your
-  test with a screenshot.
-
-5. Update the `member-join` and `member-leave` scripts (then rebuild your `ha` image)
+4. Update the `member-join` and `member-leave` scripts (then rebuild your `ha` image)
   to log also the role and name of the node that handle the events, in this case, the
-  `ha` container. Provide your updated scripts.
+  `ha` container.
 
   **hint**: Take a look in the documentation about the `Event handlers` on `Serf` official web site.
 
