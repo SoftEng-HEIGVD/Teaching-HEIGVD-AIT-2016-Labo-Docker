@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "phusion/ubuntu-14.04-amd64"
   config.vm.network "private_network", ip: "192.168.42.42"
 
-  config.vm.provision "shell", path: "provision.sh", privileged: false
+  config.vm.provision "shell", path: "provision.sh"
 
   config.ssh.forward_x11 = true
 end

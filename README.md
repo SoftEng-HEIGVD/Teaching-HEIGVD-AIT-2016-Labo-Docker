@@ -18,7 +18,8 @@ to be produced.  Collect all the deliverables in your lab report. Give
 the lab report a structure that mimics the structure of this document.
 
 We expect to have in your repository (you will get the instructions later for that)
-a folder called `report` and a folder called `logs`.
+a folder called `report` and a folder called `logs`. Ideally, your report should be
+in markdown format directly in the repository.
 
 The lab will consist of 6 tasks and one initial task which should be quick if previous lab already done:
 
@@ -85,6 +86,28 @@ Doing some researches, you will find a lot of tools and services to achieve the
 same kind of behavior.
 
 ## Task 0: Install the tools
+
+**Remarks**:
+
+- Do not forget to create a dedicated branch on your repo. On your host, you
+  can do the following command assuming you have already cloned your fork and you
+  are on master branch:
+
+  **Warning**: If you prefer to push all your work only when you reached the
+               end of the lab, you can skip the `push` commands until the end
+               of the lab. It's a way to keep your solution secret but not to keep
+               it backed up.
+
+  ```
+  # Go to the folder where you have cloned the repo
+  cd <root folder of your repository>
+
+  # Create and checkout the branch
+  git checkout -b task-0
+
+  # Keep track of your branch on GitHub
+  git push -u origin task-0
+  ```
 
 This should be already done in the lab of HAProxy. But if not, here we go we the
 installation requirements.
@@ -214,6 +237,22 @@ The fields have the following meaning:
   find that same session id embedded in the session cookie that is
   sent to the client.
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-0` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
@@ -222,6 +261,22 @@ The fields have the following meaning:
 2. Give your repository URL as we can navigates your branches.
 
 ## Task 1: Add a process manager to your images
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-0` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-1
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-1
+    ```
 
 Actually, Docker has for some people a big limitation but it was designed as a core
 feature:
@@ -266,6 +321,9 @@ RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/rele
   && tar xzf /tmp/s6.tar.gz -C / \
   && rm -f /tmp/s6.tar.gz
 ```
+
+Take the opportunity to change the `MAINTAINER` of the image by your name and email.
+Replace in both Docker files the `TODO: [GEN] Replace with your name and email`.
 
 To build your images, run the following commands inside your Vagrant VM instance:
 
@@ -408,7 +466,17 @@ cp /vagrant/webapp/scripts/run.sh /vagrant/webapp/services/node/run && chmod +x 
   - `cp` will copy the file and `chmod` will make it executable. For more info
     of the commands, run: `man touch` or `man chmod`.
 
-Once copied, replace the hashbang instruction in both files. Replace `#!/bin/sh` by `#!/usr/bin/with-contenv bash`.
+Once copied, replace the hashbang instruction in both files. Replace the first line of the `run` script
+
+```bash
+#!/bin/sh
+```
+by:
+
+```bash
+#!/usr/bin/with-contenv bash
+```
+
 This will instruct `S6` to give the environment variables from the container to the run script.
 
 The start scripts are ready but now we must copy them to the right place in the Docker image. In both
@@ -445,6 +513,22 @@ RUN chmod +x /etc/services.d/node/run
 Build again your images and run them. If everything is working fine, you should be able
 to open http://192.168.42.42 and see the same content as the previous task.
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-1` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
@@ -459,6 +543,22 @@ to open http://192.168.42.42 and see the same content as the previous task.
   find more articles on that topic to illustrate the problem.
 
 ## Task 2: Add a cluster membership management tool
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-1` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-2
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-2
+    ```
 
 During this task, we will focus on how to make our infrastructure more flexible. To
 achieve this goal, we need a tool that allow each node to know about the other nodes.
@@ -817,6 +917,22 @@ docker run -d --network heig --name s1 softengheigvd/webapp
     rm -r /vagrant/webapp/scripts
     ```
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-2` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`. You need to
@@ -842,6 +958,22 @@ docker run -d --network heig --name s1 softengheigvd/webapp
   that can be used to solve such situation where we need some auto-discovery mechanism.
 
 ## Task 3: Play with handler scripts
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-3` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-3
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-3
+    ```
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
 really dynamic. At the moment, we are missing the scripts that will manage the events
@@ -969,6 +1101,22 @@ Once you have finished, you have simply to type `exit` in the container to quit
 your shell session and at the same time the container. The container itself will
 continue to run.
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-3` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`.
@@ -979,13 +1127,23 @@ continue to run.
 3. Provide the logs from `ha` container gathered directly from the `/var/log/serf.log`
   file present in the container. Put the logs in the logs directory in your repo.
 
-4. Update the `member-join` and `member-leave` scripts (then rebuild your `ha` image)
-  to log also the role and name of the node that handle the events, in this case, the
-  `ha` container.
-
-  **hint**: Take a look in the documentation about the `Event handlers` on `Serf` official web site.
-
 ## Task 4: Play with a template engine
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-4` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-4
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-4
+    ```
 
 There are several ways to regenerate a configuration and to fill it with real values
 in a dynamic fashion. In this lab, we decided to use `NodeJS` and `Handlebars` for the
@@ -1196,6 +1354,22 @@ cat /tmp/haproxy.cfg
 exit
 ```
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-4` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. You probably noticed when we added `xz-utils`, we have to rebuild the whole image
@@ -1229,6 +1403,22 @@ exit
   generate it? What is the problem if any?
 
 ## Task 5: Generate the HAProxy config based on Serf events
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-5` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-5
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-5
+    ```
 
 At this stage, we have:
 
@@ -1449,11 +1639,27 @@ file and also the list of backend nodes. Use the previous command to reach this 
 (**keep track of the output of the ls command and the configuration file
 like the logs in previous tasks**)
 
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-5` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
 **Deliverables**:
 
 1. Give the branch for the current task
 
-2. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps
+2. Give the `/usr/local/etc/haproxy/haproxy.cfg` generated in the `ha` container after each steps
 
 3. Give the output of `ls /nodes` from inside the `ha` container.
 
@@ -1464,6 +1670,22 @@ like the logs in previous tasks**)
   not need to implement it.
 
 ## Task 6: Make everything working like a charm
+
+**Remarks**:
+
+  - Do not forget to create a dedicated branch on your repo. On your host, you
+    can do the following command assuming you are on `task-6` branch:
+
+    ```
+    # Go to the folder where you have cloned the repo
+    cd <root folder of your repository>
+
+    # Create and checkout the branch
+    git checkout -b task-6
+
+    # Keep track of your branch on GitHub
+    git push -u origin task-6
+    ```
 
 We have all the pieces ready to work and we just need to make sure the configuration
 of HAProxy is up-to-date and taken into account by HAProxy.
@@ -1572,6 +1794,25 @@ docker run -d --network heig --name s3 softengheigvd/webapp
 This time, you can see the round robin balancing. It can take few seconds before
 the second node become available. The HAProxy need to restart and this process
 take a little time.
+
+**Remarks**:
+
+  - Do not forget to commit your changes. Assuming your are in your `task-6` branch,
+    you can do the following commands (**replace the commit message by yours**):
+
+    ```
+    # Add all the untracked files
+    git add .
+
+    # Commit your files
+    git commit -m "<your commit message>"
+
+    # Push your work on GitHub
+    git push
+    ```
+
+  - If you are ready to deliver your work and you have not yet published all your
+    work, it's time to push each of your branch.
 
 **Deliverables**:
 
