@@ -262,11 +262,11 @@ To build your images, run the following commands inside your Vagrant VM instance
 ```
 # Build the haproxy image
 cd /vagrant/ha
-sudo docker build -t softengheigvd/ha .
+docker build -t softengheigvd/ha .
 
 # Build the webapp image
 cd /vagrant/webapp
-sudo docker build -t softengheigvd/webapp .
+docker build -t softengheigvd/webapp .
 ```
 
 or use the script which do the same for you:
@@ -292,14 +292,14 @@ them. You can do that with the following commands:
 
 ```
 # Stop and force to remove the containers
-sudo docker rm -f s1
-sudo docker rm -f s2
-sudo docker rm -f ha
+docker rm -f s1
+docker rm -f s2
+docker rm -f ha
 
 # Start the containers
-sudo docker run -d --name s1 softengheigvd/webapp
-sudo docker run -d --name s2 softengheigvd/webapp
-sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --link s1 --link s2 --name ha softengheigvd/ha
+docker run -d --name s1 softengheigvd/webapp
+docker run -d --name s2 softengheigvd/webapp
+docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 or you can use the script to start two base containers:
@@ -744,13 +744,13 @@ To solve this issue, we need to go a little more deeper in Docker commands and w
 need to create our own Docker network. For that, we will use the following command:
 
 ```
-sudo docker network create --driver bridge heig
+docker network create --driver bridge heig
 ```
 
 Stop all your containers:
 
 ```
-sudo docker rm -f ha s1 s2
+docker rm -f ha s1 s2
 ```
 
 If you want to know more about Docker networking, take the time to read the different
@@ -766,13 +766,13 @@ From now, to start our containers, we need to add the following argument to the 
 So to start the `ha` container the command become:
 
 ```
-sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --link s1 --link s2 --name ha softengheigvd/ha
+docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 And for the backend nodes:
 
 ```
-sudo docker run -d --network heig --name s1 softengheigvd/webapp
+docker run -d --network heig --name s1 softengheigvd/webapp
 ```
 
 **Remarks**:
@@ -797,6 +797,17 @@ sudo docker run -d --network heig --name s1 softengheigvd/webapp
   - [Understand Docker networking](https://docs.docker.com/engine/userguide/networking/)
   - [Embedded DNS server in user-defined networks](https://docs.docker.com/engine/userguide/networking/configure-dns/)
   - [docker run](https://docs.docker.com/engine/reference/commandline/run/)
+
+**Cleanup**:
+
+  - As we have changed the way we start our reverse proxy and web application, we
+    can remove the original `run.sh` scripts. You can use the following commands to
+    clean these two files (and folder in case of web application).
+
+    ```
+    rm /vagrant/ha/scripts/run.sh
+    rm -r /vagrant/webapp/scripts
+    ```
 
 **Deliverables**:
 
@@ -838,7 +849,7 @@ touch /vagrant/ha/scripts/member-leave.sh && chmod +x /vagrant/ha/scripts/member
 
 In the `member-join.sh` script, put the following content:
 
-```
+```bash
 #!/usr/bin/env bash
 
 echo "Member join script triggered" >> /var/log/serf.log
@@ -857,7 +868,7 @@ done
 
 Do the same for the `member-leave.sh` with the following content:
 
-```
+```bash
 #!/usr/bin/env bash
 
 echo "Member leave/join script triggered" >> /var/log/serf.log
@@ -888,7 +899,7 @@ RUN chmod +x /serf-handlers/*.sh
 Stop all your containers to have a fresh state:
 
 ```
-sudo docker rm -f ha s1 s2
+docker rm -f ha s1 s2
 ```
 
 Now, build your `ha` image:
@@ -896,7 +907,7 @@ Now, build your `ha` image:
 ```
 # Build the haproxy image
 cd /vagrant/ha
-sudo docker build -t softengheigvd/ha .
+docker build -t softengheigvd/ha .
 ```
 
 From there, you will be notified when you need to keep track of the logs. The logs
@@ -906,15 +917,15 @@ you to keep them for the report.
 Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
 
 ```
-sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
+docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
 Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after
 started the container, capture also the logs of `ha` node (**keep the logs**).
 
 ```
-sudo docker run -d --network heig --name s1 softengheigvd/webapp
-sudo docker run -d --network heig --name s2 softengheigvd/webapp
+docker run -d --network heig --name s1 softengheigvd/webapp
+docker run -d --network heig --name s2 softengheigvd/webapp
 ```
 
 **Remarks**:
@@ -932,7 +943,7 @@ handler scripts. For that, use the following command to connect to `ha`
 container in interactive mode.
 
 ```
-sudo docker exec -ti ha /bin/bash
+docker exec -ti ha /bin/bash
 ```
 
 **References**:
@@ -994,6 +1005,7 @@ to install `NodeJS` and `Handlebars`.
 To install `NodeJS`, just replace `TODO: [HB] Install NodeJS` by the following content:
 
 ```
+# Install NodeJS
 RUN curl -sSLo /tmp/node.tar.xz https://nodejs.org/dist/v4.4.4/node-v4.4.4-linux-x64.tar.xz \
   && tar -C /usr/local --strip-components 1 -xf /tmp/node.tar.xz \
   && rm -f /tmp/node.tar.xz
@@ -1015,10 +1027,10 @@ RUN apt-get update && apt-get -y install wget curl vim rsyslog xz-utils
     we take a shortcut and do a manual installation of `NodeJS` with at least one
     bad practice.
 
-    In the original image of `NodeJS` the download the required files and then check
-    the downloads against `GPG` signatures. We have skipped this part in our `ha`
-    image but in practice, you should check everything you do to avoid issues like
-    `man in the middle`.
+    In the original image of `NodeJS` the download of the required files and then
+    check the downloads against `GPG` signatures. We have skipped this part in
+    our `ha`image but in practice, you should check everything you do to avoid
+    issues like the `man in the middle` attack.
 
     You can take a look to the following links if you want:
 
@@ -1027,27 +1039,33 @@ RUN apt-get update && apt-get -y install wget curl vim rsyslog xz-utils
       - [Man in the middle attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)
 
     The other reason why we have to manually install `NodeJS` by hand is that we
-    cannot inherit from two images at the same time. As in our `ha` image, we already
-    come `FROM` the `haproxy` official image, then we cannot use the `NodeJS` at the same time.
+    cannot inherit from two images at the same time. As in our `ha` image, we
+    already come `FROM` the `haproxy` official image, then we cannot use
+    the `NodeJS` at the same time.
 
-    In fact, the `FROM` instruction from Docker can be see like Java Inheritance model. You
-    can inherit only from one super class at a time. So, what we can imagine is the following:
+    In fact, the `FROM` instruction from Docker can be see like Java Inheritance
+    model. You can inherit only from one super class at a time. So, what we can
+    imagine is the following:
 
     ```
     os base image <- haproxy <- node haproxy <- our custom proxy conf
     ```
 
-    Where each stage is an image. Doing the things like that allow us to reuse our
-    own haproxy enriched with `NodeJS` capability in a different context. You can
-    take a look to the Docker doc:
+    Where each stage is an image. Doing the things like that allow us to reuse
+    our own HAProxy image enriched with `NodeJS` capability in a different
+    context. You can take a look to the Docker doc:
 
       - [FROM](https://docs.docker.com/engine/reference/builder/#/from)
+
+    Another option is to create an image based on the `NodeJS` one and add
+    the `HAProxy` installation by ourselves.
 
 It's time to install `Handlebars` and a small command line util to make it working
 properly. For that, replace the `TODO: [HB] Install Handlebars and cli` by this
 Docker instruction:
 
 ```
+# Install the handlebars-cmd node module and its dependencies
 RUN npm install -g handlebars-cmd
 ```
 
@@ -1060,15 +1078,21 @@ RUN npm install -g handlebars-cmd
 
 Now we will update the handler scripts to use `Handlebars`. For the moment, we
 will just play with a simple template. So, first create a file in `ha/config` called
-`haproxy.cfg.hb` with the following content:
+`haproxy.cfg.hb` with a simple template content. Use the following command for that:
 
 ```
-Container {{ name }} has joined the Serf cluster with the following IP address: {{ ip }}
+echo "Container {{ name }} has joined the Serf cluster with the following IP address: {{ ip }}" >> /vagrant/ha/config/haproxy.cfg.hb
 ```
 
-We need our template present in our `ha` image. This time, the plumbing is already done
-for you. In fact, in the Docker file, we have `COPY config /config/` which will copy all
-the files present in the folder `ha/config` to `/config` in the image.
+We need our template present in our `ha` image. We have to add the following
+Docker instructions for that. Let's replace `TODO: [HB] Copy the haproxy configuration template`
+in [ha/Dockerfile](ha/Dockerfile#L32)
+
+```
+# Create the config directory and copy the template
+RUN mkdir /config
+COPY config/haproxy.cfg.hb /config/haproxy.cfg.hb
+```
 
 Then, update the `member-join.sh` script in [ha/scripts](ha/scripts) with the following content:
 
@@ -1098,29 +1122,41 @@ are the commands to build and run our image and containers:
 
 ```
 # Remove running containers
-sudo docker rm -f ha
-sudo docker rm -f s1
-sudo docker rm -f s2
+docker rm -f ha s1 s2
 
 # Build the haproxy image
 cd /vagrant/ha
-sudo docker build -t softengheigvd/ha .
+docker build -t softengheigvd/ha .
 
 # Run the HAProxy container
-sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
+docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
+
+**Remarks**:
+
+  - Installing a new util with `apt-get` means building the whole image again as
+    it is in our Docker file. This will take few minutes.
 
 Take the time to retrieve the output file in the `ha` container. Connect to the container:
 
 ```
-sudo docker exec -ti ha /bin/bash
+docker exec -ti ha /bin/bash
 ```
 
-and get the content from the file (keep it for deliverables)
+and get the content from the file (**keep it for deliverables, handle it as you do for the logs**)
 
 ```
 cat /tmp/haproxy.cfg
 ```
+
+**Remarks**:
+
+  - It can be really convenient to have two or more terminal with a ssh session
+    to your Vagrant VM. With multiple session you can keep your connection to
+    `ha` container alive during you start your backend nodes.
+
+    To open another ssh session to Vagrant, simply run `vagrant ssh` in the root
+    directory of your repository from another terminal tab/window.
 
 And quit the container with `exit`.
 
@@ -1128,22 +1164,22 @@ Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
 
 ```
 # 1) Run the S1 container
-sudo docker run -d --network heig --name s1 softengheigvd/webapp
+docker run -d --network heig --name s1 softengheigvd/webapp
 
-# 2) Connect to the ha container
-sudo docker exec -ti ha /bin/bash
+# 2) Connect to the ha container (optional if you have another ssh session)
+docker exec -ti ha /bin/bash
 
 # 3) From the container, extract the content (keep it for deliverables)
 cat /tmp/haproxy.cfg
 
-# 4) Quit the ha container
+# 4) Quit the ha container (optional if you have another ssh session)
 exit
 
-# 5) Rune the S2 container
-sudo docker run -d --network heig --name s2 softengheigvd/webapp
+# 5) Run the S2 container
+docker run -d --network heig --name s2 softengheigvd/webapp
 
-# 6) Connect to the ha container
-sudo docker exec -ti ha /bin/bash
+# 6) Connect to the ha container (optional if you have another ssh session)
+docker exec -ti ha /bin/bash
 
 # 7) From the container, extract the content (keep it for deliverables)
 cat /tmp/haproxy.cfg
@@ -1177,10 +1213,12 @@ exit
 
 2. Give the branch for the current task
 
-3. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps
+3. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps.
+  Place the output into the logs folder like you already done for the Docker logs
+  in the previous tasks.
 
 4. Based on the three output files gathered, what can you tell about the way we
-  generate it?
+  generate it? What is the problem if any?
 
 ### Task 5: Generate the HAProxy config based on Serf events
 
@@ -1375,7 +1413,7 @@ ls /nodes
 Stop one of the two containers with the following Docker command:
 
 ```
-sudo docker stop s1
+docker stop s1
 ```
 
 Now, you can connect again to the `ha` container and get the haproxy configuration
@@ -1472,16 +1510,16 @@ It's time to build and run our images. Again, you can simply use the following i
 
 ```
 # Force remove the three containers
-sudo docker rm -f ha
-sudo docker rm -f s1
-sudo docker rm -f s2
+docker rm -f ha
+docker rm -f s1
+docker rm -f s2
 
 # Build the haproxy image
 cd /vagrant/ha
-sudo docker build -t softengheigvd/ha .
+docker build -t softengheigvd/ha .
 
 # Start ha container
-sudo docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
+docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
 At this stage, if you try to reach `http://192.168.42.42`, it will not work. No surprise as
@@ -1489,7 +1527,7 @@ we do not start any backend node. Let's start one container and try to reach the
 
 ```
 # Start one backend node
-sudo docker run -d --network heig --name s1 softengheigvd/webapp
+docker run -d --network heig --name s1 softengheigvd/webapp
 ```
 
 If everything works well, you could reach your backend application through the
@@ -1497,10 +1535,10 @@ load balancer. And now we start a two more backend nodes.
 
 ```
 # Start second backend node
-sudo docker run -d --network heig --name s2 softengheigvd/webapp
+docker run -d --network heig --name s2 softengheigvd/webapp
 
 # Start third backend node
-sudo docker run -d --network heig --name s3 softengheigvd/webapp
+docker run -d --network heig --name s3 softengheigvd/webapp
 ```
 
 This time, you can see the round robin balancing. It can take few seconds before
