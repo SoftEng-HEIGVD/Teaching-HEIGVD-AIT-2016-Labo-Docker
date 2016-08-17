@@ -327,9 +327,10 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
 
 We need to configure `S6` as our main process and then replace the current ones. For that
 we will update our Docker images [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile) and
-replace the: `TODO: [S6] Replace the following line` by the following Docker instruction:
+replace the: `TODO: [S6] Replace the following instruction` by the following Docker instruction:
 
 ```
+# This will start S6 as our main process in our container
 ENTRYPOINT ["/init"]
 ```
 
@@ -404,14 +405,15 @@ This will instruct `S6` to give the environment variables from the container to 
 The start scripts are ready but now we must copy them to the right place in the Docker image. In both
 `ha` and `webapp` Docker files, you need to add a `COPY` instruction to setup the service correctly.
 
-In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two lines above` by
+In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two following instructions` by
 
 ```
+# Copy the S6 service and make the run script executable
 COPY services/ha /etc/services.d/ha
 RUN chmod +x /etc/services.d/ha/run
 ```
 
-Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two lines above` by
+Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two following instructions` by
 
 ```
 COPY services/node /etc/services.d/node
@@ -1474,7 +1476,7 @@ take a little time.
 
 #### Lab due date
 
-Deliver your results at the latest 15 minutes before class Wednesday, November 25.
+Deliver your results at the latest 15 minutes before class TBD
 
 #### Windows troubleshooting
 
