@@ -94,7 +94,7 @@ Once you have installed everything, start the Vagrant VM from the
 project folder with the following command:
 
 ```bash
-$ vagrant up
+vagrant up
 ```
 
 This will download an Ubuntu Linux image and initialize a Vagrant
@@ -110,7 +110,7 @@ The provisioning of the VM and the containers will take several
 minutes. You should see output similar to the following:
 
 ```
-$ vagrant up
+vagrant up
 Bringing machine 'default' up with 'virtualbox' provider...
 ==> default: Importing base box 'phusion/ubuntu-14.04-amd64'...
 ==> default: Matching MAC address for NAT networking...
@@ -130,14 +130,14 @@ There will be occasional error messages from `dpkg-preconfigure`,
 
 When deployment is finished you can log into the VM like so:
 
-```
-$ vagrant ssh
+```bash
+vagrant ssh
 ```
 
 Once inside the VM you can list the running containers like so:
 
-```
-$ docker ps
+```bash
+docker ps
 ```
 
 You should see output similar to the following:
@@ -259,7 +259,7 @@ RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/rele
 
 To build your images, run the following commands inside your Vagrant VM instance:
 
-```
+```bash
 # Build the haproxy image
 cd /vagrant/ha
 docker build -t softengheigvd/ha .
@@ -271,7 +271,7 @@ docker build -t softengheigvd/webapp .
 
 or use the script which do the same for you:
 
-```
+```bash
 /vagrant/build-images.sh
 ```
 
@@ -290,11 +290,9 @@ or use the script which do the same for you:
 To start the containers, first you need to stop the current containers and remove
 them. You can do that with the following commands:
 
-```
+```bash
 # Stop and force to remove the containers
-docker rm -f s1
-docker rm -f s2
-docker rm -f ha
+docker rm -f s1 s2 ha
 
 # Start the containers
 docker run -d --name s1 softengheigvd/webapp
@@ -304,7 +302,7 @@ docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --link s1 --link s2 --name ha s
 
 or you can use the script to start two base containers:
 
-```
+```bash
 /vagrant/start-containers.sh
 ```
 
@@ -356,7 +354,7 @@ our applications will be available again.
 Let's start by creating a folder called `service` in `ha` and `webapp` folders. You can
 use the above commands (do this command in your Vagrant VM):
 
-```
+```bash
 mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
 ```
 
@@ -387,7 +385,7 @@ You should have the following folders structure:
 We need to copy the `run.sh` scripts as `run` files in the service directories.
 You can achieve that by the following commands (do these commands in your Vagrant VM):
 
-```
+```bash
 cp /vagrant/ha/scripts/run.sh /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/ha/run
 cp /vagrant/webapp/scripts/run.sh /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
 ```
@@ -512,7 +510,7 @@ To start `Serf`, we need to create the proper service for `S6`. Let's do that wi
 the creation of the service folder in `ha/services` and `webapp/services`. Use the
 following command to do that (run this command in your Vagrant VM).
 
-```
+```bash
 mkdir /vagrant/ha/services/serf /vagrant/webapp/services/serf
 ```
 
@@ -540,7 +538,7 @@ You should have the following folders structure:
 In each directory, create an executable file called `run`. You can achieve that
 by the following commands:
 
-```
+```bash
 touch /vagrant/ha/services/serf/run && chmod +x /vagrant/ha/services/serf/run
 touch /vagrant/webapp/services/serf/run && chmod +x /vagrant/webapp/services/serf/run
 ```
@@ -603,7 +601,7 @@ wait
 Let's take the time to analyze the `Serf` agent command. We launch the `Serf` agent
 with the command:
 
-```
+```bash
 serf agent
 ```
 
@@ -620,7 +618,7 @@ Therefore, `s1` will join the same cluster than `s2` and `ha` but through `s2`.
 For simplicity, all our nodes will register to the same cluster trough the `ha`
 node.
 
-```
+```bash
 --join ha
 ```
 
@@ -640,13 +638,13 @@ the `--replay` option. This will allow to replay the past events and then react 
 these events. In fact, due to the problem you have to guess, this will probably not
 be really useful.
 
-```
+```bash
 --replay
 ```
 
 Then we append the event handlers to react to some events.
 
-```
+```bash
 --event-handler member-join=/serf-handlers/member-join.sh
 --event-handler member-leave,member-failed=/serf-handlers/member-leave.sh
 ```
@@ -658,7 +656,7 @@ And finally, we set a tag `role=<rolename>` to our load balancer. The `$ROLE` is
 the environment variable that we have in the Docker files. With the role, we will
 be able to make the difference between the `balancer` and the `backend` nodes.
 
-```
+```bash
 --tag role=$ROLE
 ```
 
@@ -678,7 +676,7 @@ Let's prepare the same kind of configuration. Copy the `run` file you just creat
 in `webapp/services/serf` and replace the content between `SERF START` and `SERF END`
 by the following one:
 
-```
+```bash
 # We build the Serf command to run the agent
 COMMAND="/opt/bin/serf agent"
 COMMAND="$COMMAND --join serf-cluster"
@@ -719,7 +717,7 @@ run the command manually. At this stage, you should have your application runnin
 `Serf` agents. To ensure that, you can access http://192.168.42.42 to see if you backends
 are responding and you can check the Docker logs to see what is happening. Simply run:
 
-```
+```bash
 docker logs <container name>
 ```
 
@@ -743,13 +741,13 @@ Docker where the networking have been totally reworked.
 To solve this issue, we need to go a little more deeper in Docker commands and we
 need to create our own Docker network. For that, we will use the following command:
 
-```
+```bash
 docker network create --driver bridge heig
 ```
 
 Stop all your containers:
 
-```
+```bash
 docker rm -f ha s1 s2
 ```
 
@@ -759,19 +757,19 @@ this important topic.
 
 From now, to start our containers, we need to add the following argument to the `docker run` command
 
-```
+```bash
 --network heig
 ```
 
 So to start the `ha` container the command become:
 
-```
+```bash
 docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --link s1 --link s2 --name ha softengheigvd/ha
 ```
 
 And for the backend nodes:
 
-```
+```bash
 docker run -d --network heig --name s1 softengheigvd/webapp
 ```
 
@@ -804,7 +802,7 @@ docker run -d --network heig --name s1 softengheigvd/webapp
     can remove the original `run.sh` scripts. You can use the following commands to
     clean these two files (and folder in case of web application).
 
-    ```
+    ```bash
     rm /vagrant/ha/scripts/run.sh
     rm -r /vagrant/webapp/scripts
     ```
@@ -842,7 +840,7 @@ of `Serf` and then react to member `leave` or member `join`.
 We will start by creating the scripts in [ha/scripts](ha/scripts). So create two files in
 this directory and set them as executable. You can use these commands:
 
-```
+```bash
 touch /vagrant/ha/scripts/member-join.sh && chmod +x /vagrant/ha/scripts/member-join.sh
 touch /vagrant/ha/scripts/member-leave.sh && chmod +x /vagrant/ha/scripts/member-leave.sh
 ```
@@ -898,13 +896,13 @@ RUN chmod +x /serf-handlers/*.sh
 
 Stop all your containers to have a fresh state:
 
-```
+```bash
 docker rm -f ha s1 s2
 ```
 
 Now, build your `ha` image:
 
-```
+```bash
 # Build the haproxy image
 cd /vagrant/ha
 docker build -t softengheigvd/ha .
@@ -916,14 +914,14 @@ you to keep them for the report.
 
 Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
 
-```
+```bash
 docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
 Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after
 started the container, capture also the logs of `ha` node (**keep the logs**).
 
-```
+```bash
 docker run -d --network heig --name s1 softengheigvd/webapp
 docker run -d --network heig --name s2 softengheigvd/webapp
 ```
@@ -942,7 +940,7 @@ to the running container to gather the custom log file that is created in the
 handler scripts. For that, use the following command to connect to `ha`
 container in interactive mode.
 
-```
+```bash
 docker exec -ti ha /bin/bash
 ```
 
@@ -953,7 +951,7 @@ docker exec -ti ha /bin/bash
 Once done, you can simply run the following command. This command is run inside
 the running `ha` container. (**keep the logs**)
 
-```
+```bash
 cat /var/log/serf.log
 ```
 
@@ -1080,7 +1078,7 @@ Now we will update the handler scripts to use `Handlebars`. For the moment, we
 will just play with a simple template. So, first create a file in `ha/config` called
 `haproxy.cfg.hb` with a simple template content. Use the following command for that:
 
-```
+```bash
 echo "Container {{ name }} has joined the Serf cluster with the following IP address: {{ ip }}" >> /vagrant/ha/config/haproxy.cfg.hb
 ```
 
@@ -1096,7 +1094,7 @@ COPY config/haproxy.cfg.hb /config/haproxy.cfg.hb
 
 Then, update the `member-join.sh` script in [ha/scripts](ha/scripts) with the following content:
 
-```
+```bash
 #!/usr/bin/env bash
 
 echo "Member join script triggered" >> /var/log/serf.log
@@ -1120,7 +1118,7 @@ done
 Time to build our `ha` image and to run it. We will also run `s1` and `s2`. As usual, there
 are the commands to build and run our image and containers:
 
-```
+```bash
 # Remove running containers
 docker rm -f ha s1 s2
 
@@ -1139,13 +1137,13 @@ docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha soften
 
 Take the time to retrieve the output file in the `ha` container. Connect to the container:
 
-```
+```bash
 docker exec -ti ha /bin/bash
 ```
 
 and get the content from the file (**keep it for deliverables, handle it as you do for the logs**)
 
-```
+```bash
 cat /tmp/haproxy.cfg
 ```
 
@@ -1162,7 +1160,7 @@ And quit the container with `exit`.
 
 Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
 
-```
+```bash
 # 1) Run the S1 container
 docker run -d --network heig --name s1 softengheigvd/webapp
 
