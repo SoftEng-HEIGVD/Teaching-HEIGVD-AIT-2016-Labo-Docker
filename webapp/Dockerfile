@@ -19,8 +19,8 @@ RUN cd /backend/app && npm install && bower install --allow-root
 
 # TODO: [S6] Replace the two following instructions
 # Copy the starting script and make it executable
-COPY run.sh run.sh
-RUN chmod +x run.sh
+COPY scripts /scripts/
+RUN chmod +x /scripts/*.sh
 
 # TODO: [Serf] Add Serf S6 setup
 
@@ -37,4 +37,4 @@ ENV ROLE backend
 
 # TODO: [S6] Replace the following instruction
 # Command executed when the container starts
-CMD [ "./run.sh" ]
+CMD [ "/scripts/run.sh" ]

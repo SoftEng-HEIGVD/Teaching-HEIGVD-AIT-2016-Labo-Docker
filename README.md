@@ -52,7 +52,7 @@ the lab report a structure that mimics the structure of this document.
     no more require a tag. An environment variable is defined in the Docker files to specify a
     role for each image. We will see later how use that.
 
-  - We expect, at least, in your report to see:
+  - We expect, at least, to see in your report:
 
     - An introduction describing briefly the lab
 
@@ -67,7 +67,7 @@ the lab report a structure that mimics the structure of this document.
 
 **DISCLAIMER**: In this lab, we will go through a possible manner to manage a
 scalable infrastructure where we can add and remove nodes without having to rebuild
-the HAProxy server. This is not the only one possibility to achieve such a goal.
+the HAProxy image. This is not the only one possibility to achieve such a goal.
 Doing some researches, you will find a lot of tools and services to achieve the
 same kind of behavior.
 
@@ -78,13 +78,12 @@ installation requirements.
 
 Install on your local machine Vagrant to create a virtual
 environment. We provide scripts for installing and running inside this
-virtual environment Docker. Install also JMeter for load testing web
-applications:
+virtual environment Docker:
 
 * [Vagrant](https://www.vagrantup.com/)
 
 Fork the following repository and then clone the fork to your machine:
-<https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2015-Labo-02>
+<https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2015-Labo-Docker>
 
 To fork the repo, just click on the `Fork` button in the GitHub interface.
 
@@ -189,9 +188,6 @@ The fields have the following meaning:
 * The field `host` is the hostname of the container and in the Docker
   context this represents the container ID.
 
-* The `tag` represents the server tag corresponding, in our case, to
-  the container name (docker **--name s1**).
-
 * The field `sessionViews` returns a counter that is a session
   variable. The counter is incremented each time the app receives a
   request.  **Hint**: Use this field to observe the session behavior
@@ -211,13 +207,15 @@ The fields have the following meaning:
 ### Task 1: Add a process manager to your images
 
 Actually, Docker has for some people a big limitation but it was designed as a core
-feature: **One container == one process**
+feature:
 
-In summary, this means that you should not be able to run multiple processes at the
-same time in a Docker container. But ???
+  > One container == one process
 
-This can be easily explained by the fact that a container is running only there
-is a front process running. When run processes like Nginx or Apache which
+In summary, this means that you should not be able to run multiple processes at
+the same time in a Docker container. But ???
+
+This can be easily explained by the fact that a container is running only if
+there is a front process running. When run processes like Nginx or Apache which
 are designed to be run as daemons by defaults without doing anything special. The
 processes will start and right after they will stop and your container too.
 
@@ -227,7 +225,7 @@ daemon mode.
 
 So, how can we do to run multiple processes inside one container. There we go for
 the `process managers` family. There is plenty of solution to manage the processes
-like we have `init.d`.
+like `init.d`.
 
 In this lab, we will use a small one called `S6` http://skarnet.org/software/s6/.
 And more specifically, we will use https://github.com/just-containers/s6-overlay which
@@ -243,9 +241,10 @@ a time in a Docker container. That's just what we need.
 So to add it to your images, you will find `TODO: [S6] Install` placeholders in
 the Docker images of [HAProxy](ha/Dockerfile) and the [web application](webapp/Dockerfile)
 
-Replace the `TODO` with the following Docker instruction:
+Replace the `TODO: [S6] Install` with the following Docker instruction:
 
 ```
+# Download and install S6 overlay
 RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/releases/download/v1.17.2.0/s6-overlay-amd64.tar.gz \
   && tar xzf /tmp/s6.tar.gz -C / \
   && rm -f /tmp/s6.tar.gz
@@ -274,14 +273,14 @@ or use the script which do the same for you:
   - [RUN](https://docs.docker.com/engine/reference/builder/#/run)
   - [docker build](https://docs.docker.com/engine/reference/commandline/build/)
 
-Ok, this part was the easiest one. We just installed one more stuff inside our image
-and now we need to do something with that.
+**Remarks**:
 
-**Note**: If you run your containers right now, you will notice that there is no difference
-between now and the previous state of our images. It's normal as we do not have configured
-anything for `S6` and we do not start it in the container.
+  - If you run your containers right now, you will notice that there is no
+    difference between now and the previous state of our images. It's normal as
+    we do not have configured anything for `S6` and we do not start it in
+    the container.
 
-To run your images as containers, first you need to stop the current containers and remove
+To start the containers, first you need to stop the current containers and remove
 them. You can do that with the following commands:
 
 ```
@@ -313,11 +312,9 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
 
 **Remarks**:
 
-  - If you have more than 2 backends, you will need to adapt these commands for
-    the additional containers. Same for the script.
-
-  - You have better to train the Docker commands as the next tasks will require more and
-    more of them. The scripts provided for the basics will no more be usable.
+  - Later in this lab, the two scripts `start-containers.sh` and `build-images.sh`
+    will be less relevant. During this lab, will build and run extensively the `ha`
+    proxy image. Get trained with the docker `build` and `run` commands.
 
 **References**:
 
@@ -338,8 +335,8 @@ ENTRYPOINT ["/init"]
 
   - [ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#/entrypoint)
 
-You can build and run the updated images (use the commands already provided earlier). As you
-can observe if you try to go to http://192.168.42.42, there is nothing live.
+You can build and run the updated images (use the commands already provided earlier).
+As you can observe if you try to go to http://192.168.42.42, there is nothing live.
 
 It's the expected behavior for now as we just replaced the application process by
 the process manager one. We have a superb process manager up and running but no more
