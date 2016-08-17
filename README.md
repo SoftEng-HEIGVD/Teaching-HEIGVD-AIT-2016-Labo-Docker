@@ -1,10 +1,10 @@
 title: Lab ? - Docker
 ---
 
-## Lab ? - Docker
+# Lab ? - Docker
 
 
-#### Pedagogical objectives
+### Pedagogical objectives
 
 * Reuse part of a previous lab concepts about the load balancing
 
@@ -84,7 +84,7 @@ the HAProxy image. This is not the only one possibility to achieve such a goal.
 Doing some researches, you will find a lot of tools and services to achieve the
 same kind of behavior.
 
-### Task 0: Install the tools
+## Task 0: Install the tools
 
 This should be already done in the lab of HAProxy. But if not, here we go we the
 installation requirements.
@@ -221,7 +221,7 @@ The fields have the following meaning:
 
 2. Give your repository URL as we can navigates your branches.
 
-### Task 1: Add a process manager to your images
+## Task 1: Add a process manager to your images
 
 Actually, Docker has for some people a big limitation but it was designed as a core
 feature:
@@ -458,7 +458,7 @@ to open http://192.168.42.42 and see the same content as the previous task.
   installing a process manager. Do not hesitate to do more researches and to
   find more articles on that topic to illustrate the problem.
 
-### Task 2: Add a cluster membership management tool
+## Task 2: Add a cluster membership management tool
 
 During this task, we will focus on how to make our infrastructure more flexible. To
 achieve this goal, we need a tool that allow each node to know about the other nodes.
@@ -841,7 +841,7 @@ docker run -d --network heig --name s1 softengheigvd/webapp
   details about the `GOSSIP` protocol used in `Serf`. Try to find other solutions
   that can be used to solve such situation where we need some auto-discovery mechanism.
 
-### Task 3: Play with handler scripts
+## Task 3: Play with handler scripts
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
 really dynamic. At the moment, we are missing the scripts that will manage the events
@@ -985,7 +985,7 @@ continue to run.
 
   **hint**: Take a look in the documentation about the `Event handlers` on `Serf` official web site.
 
-### Task 4: Play with a template engine
+## Task 4: Play with a template engine
 
 There are several ways to regenerate a configuration and to fill it with real values
 in a dynamic fashion. In this lab, we decided to use `NodeJS` and `Handlebars` for the
@@ -1228,7 +1228,7 @@ exit
 4. Based on the three output files gathered, what can you tell about the way we
   generate it? What is the problem if any?
 
-### Task 5: Generate the HAProxy config based on Serf events
+## Task 5: Generate the HAProxy config based on Serf events
 
 At this stage, we have:
 
@@ -1463,7 +1463,7 @@ like the logs in previous tasks**)
 5. Propose a different approach to manage the list of backend nodes. You do
   not need to implement it.
 
-### Task 6: Make everything working like a charm
+## Task 6: Make everything working like a charm
 
 We have all the pieces ready to work and we just need to make sure the configuration
 of HAProxy is up-to-date and taken into account by HAProxy.
@@ -1583,11 +1583,11 @@ take a little time.
 
 3. Present a live demo where you add and remove a backend container.
 
-#### Lab due date
+## Lab due date
 
 Deliver your results at the latest 15 minutes before class TBD
 
-#### Windows troubleshooting
+## Windows troubleshooting
 
 It appears that Windows users can encounter a `CRLF` vs. `LF` problem when the repos is cloned without taking care of the ending lines. Therefore, if the ending lines are `CRFL`, it will produce an error message with Docker during the Vagrant provisioning phase:
 
