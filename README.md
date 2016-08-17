@@ -24,11 +24,11 @@ The lab will consist of 6 tasks and one initial task which should be quick if pr
 
 0. [Install the tools](#task-0-install-the-tools)
 1. [Add a process manager to your images](#task-1-add-a-process-manager-to-your-images)
-2. [Add a cluster membership management tool](#task-2-add-a-cluster-memebership-management-tool)
+2. [Add a cluster membership management tool](#task-2-add-a-cluster-membership-management-tool)
 3. [Play with handler scripts](#task-3-play-with-handler-scripts)
 4. [Play with a template engine](#task-4-play-with-a-template-engine)
-5. [Generate the HAProxy config based on Serf events](#task-5-generate-haproxy-config-based-on-serf-events)
-6. [Make everything working like a charm](#make-everything-working-like-a-charm)
+5. [Generate the HAProxy config based on Serf events](#task-5-generate-the-haproxy-config-based-on-serf-events)
+6. [Make everything working like a charm](#task-6-make-everything-working-like-a-charm)
 
 **Remark**:
 
