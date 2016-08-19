@@ -178,7 +178,7 @@ TCP ports 1936 and 9999 which we will cover later.
 The architecture of our distributed web application is shown in the
 following diagram:
 
-![Architecture](assets/img/archi.png)
+![Architecture](assets/img/initial-architecture.png)
 
 You can now navigate to the address of the load balancer
 <http://192.168.42.42> in your favorite browser. The load balancer
@@ -266,7 +266,7 @@ A central piece of the Docker design is the principle (which for some people is 
 
 This means that the designers of Docker assumed that in the normal case there is only a single process running inside a container. But ???
 
-Docker is designed around this principle and as a consequence a container is running only if there is a foreground process running. When the foreground process stops, the container stops as well. 
+Docker is designed around this principle and as a consequence a container is running only if there is a foreground process running. When the foreground process stops, the container stops as well.
 
 When you normally run server software like Nginx or Apache, which are designed to be run as daemons, you run a command to start them. The command is a foreground process. What happens usually is that this process then forks a background process (the daemon) and exits. Thus when you run the command in a container the process starts and right after stops and your container stops, too.
 
