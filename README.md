@@ -6,22 +6,22 @@ title: Lab ? - Docker
 
 ### Pedagogical objectives
 
-* Reuse part of a previous lab concepts about the load balancing
-
 * Build your own Docker images
 
-* Understand core concepts for production scaling of an application
+* Understand core concepts for scaling of an application in production
+
+This lab builds on a previous lab on load balancing.
 
 In this lab you will perform a number of tasks and document your
 progress in a lab report. Each task specifies one or more deliverables
 to be produced.  Collect all the deliverables in your lab report. Give
 the lab report a structure that mimics the structure of this document.
 
-We expect to have in your repository (you will get the instructions later for that)
+We expect you to have in your repository (you will get the instructions later for that)
 a folder called `report` and a folder called `logs`. Ideally, your report should be
-in markdown format directly in the repository.
+in Markdown format directly in the repository.
 
-The lab will consist of 6 tasks and one initial task which should be quick if previous lab already done:
+The lab will consist of 6 tasks and one initial task (the initial task should should be quick if you already completed the lab on load balancing):
 
 0. [Install the tools](#task-0-install-the-tools)
 1. [Add a process manager to your images](#task-1-add-a-process-manager-to-your-images)
@@ -31,72 +31,59 @@ The lab will consist of 6 tasks and one initial task which should be quick if pr
 5. [Generate the HAProxy config based on Serf events](#task-5-generate-the-haproxy-config-based-on-serf-events)
 6. [Make everything working like a charm](#task-6-make-everything-working-like-a-charm)
 
-**Remark**:
+**Remarks**:
 
-  - Use the Task numbers and question numbers in reference in your report.
+- Use the Task numbers and question numbers in reference in your report.
 
-  - The version of HAProxy used in this lab is `1.5`. When reading the doc, take care to read the doc corresponding to this version. Here is the link: http://cbonte.github.io/haproxy-dconv/configuration-1.5.html
+- The version of HAProxy used in this lab is `1.5`. When reading the doc, take care to read the doc corresponding to this version. Here is the link: <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>
 
-  - You must give the fork URL of the repository of this lab.
+- You must give the URL of the repository that you forked off this lab.
 
-  - You must create one branch per task (from task 1, no branch for task 0)
+- You must create one branch per task (from task 1, no branch for task 0)
 
-    - `Create a branch`: `git checkout -b <branch name>`. Ex: `git checkout -b task-1`
+  - `Create a branch`: `git checkout -b <branch name>`. Ex: `git checkout -b task-1`
 
-    - `Push a branch (first time)`: `git push -u origin <branch name>`. Ex: `git branch -u origin task-1`
+  - `Push a branch (first time)`: `git push -u origin <branch name>`. Ex: `git branch -u origin task-1`
 
-    - `Push updates (second time and following)`: `git push`
+  - `Push updates (second time and following)`: `git push`
 
-    - `Add updates to staging`: `git add <file path>`. Ex: `git add .` (will add all modifications)
+  - `Add updates to staging`: `git add <file path>`. Ex: `git add .` (will add all modifications)
 
-    - `Committing staged changes`: `git commit -m "<message>"`. Ex: `git commit -m "Added run script"`
+  - `Committing staged changes`: `git commit -m "<message>"`. Ex: `git commit -m "Added run script"`
 
-    - `Checkout a branch`: `git checkout <branch name>`. Ex: `git checkout task-1`
+  - `Checkout a branch`: `git checkout <branch name>`. Ex: `git checkout task-1`
 
-    - `Fetching changes from remote`: `git fetch`.
+  - `Fetching changes from remote`: `git fetch`.
 
-    - `Applying remote changes`: `git pull`
+  - `Applying remote changes`: `git pull`
 
-    - Any git issue, ask us for help.
+  - Any git issue, ask us for help.
 
-  - It's really important to make each task in a separate branch. In doubts, ask us. No respect of
-    this point will be penalized.
+- It's really important to make each task in a separate branch. In doubt, ask us. Non-respect of this point will be penalized.
 
-  - The images and web application have been modified since the previous lab. The web app does
-    no more require a tag. An environment variable is defined in the Docker files to specify a
-    role for each image. We will see later how use that.
+- The images and web application are a bit different from the lab on load balancing. The web app does no longer require a tag. An environment variable is defined in the Docker files to specify a role for each image. We will see later how use that.
 
-  - We expect, at least, to see in your report:
+- We expect, at least, to see in your report:
 
-    - An introduction describing briefly the lab
+  - An introduction describing briefly the lab
 
-    - 6 chapters, one for each task
+  - Six chapters, one for each task
 
-    - A table of content
+  - A table of content
 
-    - If any, difficulties chapter where you will describe the problems and
-      solutions you have encountered
+  - A chapter named "Difficulties" where you describe the problems and solutions you have encountered
 
-    - A Conclusion
+  - A conclusion
 
-**DISCLAIMER**: In this lab, we will go through a possible manner to manage a
-scalable infrastructure where we can add and remove nodes without having to rebuild
-the HAProxy image. This is not the only one possibility to achieve such a goal.
-Doing some researches, you will find a lot of tools and services to achieve the
-same kind of behavior.
+**DISCLAIMER**: In this lab, we will go through one possible approach to manage a scalable infrastructure where we can add and remove nodes without having to rebuild the HAProxy image. This is not the only way to achieve this goal. If you do some research, you will find a lot of tools and services to achieve the same kind of behavior.
 
 ## Task 0: Install the tools
 
 **Remarks**:
 
-- Do not forget to create a dedicated branch on your repo. On your host, you
-  can do the following command assuming you have already cloned your fork and you
-  are on master branch:
+- Do not forget to create a dedicated branch on your repo. On your host, you can run the following command, assuming you have already cloned your fork and you are on the master branch:
 
-  **Warning**: If you prefer to push all your work only when you reached the
-               end of the lab, you can skip the `push` commands until the end
-               of the lab. It's a way to keep your solution secret but not to keep
-               it backed up.
+  **Warning**: If you prefer to push all your work only when you reach the end of the lab, you can skip the `push` commands and run them only at the end. It's a way to keep your solution secret, but on the other hand you will not have a backup.
 
   ```
   # Go to the folder where you have cloned the repo
@@ -109,12 +96,9 @@ same kind of behavior.
   git push -u origin task-0
   ```
 
-This should be already done in the lab of HAProxy. But if not, here we go we the
-installation requirements.
+You should have done this already in the lab of HAProxy. But if not, here are the installation instructions.
 
-Install on your local machine Vagrant to create a virtual
-environment. We provide scripts for installing and running inside this
-virtual environment Docker:
+Install on your local machine Vagrant to create a virtual environment. We provide scripts for installing and running Docker inside this virtual environment:
 
 * [Vagrant](https://www.vagrantup.com/)
 
@@ -132,7 +116,7 @@ vagrant up
 
 This will download an Ubuntu Linux image and initialize a Vagrant
 virtual machine with it. Vagrant then runs a provisioning script
-inside the VM that installs Dockerand creates three Docker
+inside the VM that installs Docker and creates three Docker
 containers. One contains HAProxy, the other two contain each a sample
 web application.
 
@@ -239,8 +223,7 @@ The fields have the following meaning:
 
 **Remarks**:
 
-  - Do not forget to commit your changes. Assuming your are in your `task-0` branch,
-    you can do the following commands (**replace the commit message by yours**):
+  - Do not forget to commit your changes. Assuming your are in your `task-0` branch, you can run the following commands (**replace the commit message with your own message**):
 
     ```
     # Add all the untracked files
@@ -255,17 +238,16 @@ The fields have the following meaning:
 
 **Deliverables**:
 
-1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
-  should see your backend nodes.
+1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You should see your backend nodes.
 
-2. Give your repository URL as we can navigates your branches.
+2. Give your repository URL as we can navigate your branches.
 
 ## Task 1: Add a process manager to your images
 
 **Remarks**:
 
   - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-0` branch:
+    can run the following command assuming you are on `task-0` branch:
 
     ```
     # Go to the folder where you have cloned the repo
@@ -278,36 +260,28 @@ The fields have the following meaning:
     git push -u origin task-1
     ```
 
-Actually, Docker has for some people a big limitation but it was designed as a core
-feature:
+A central piece of the Docker design is the principle (which for some people is a big limitation):
 
-  > One container == one process
+  > One process per container
 
-In summary, this means that you should not be able to run multiple processes at
-the same time in a Docker container. But ???
+This means that the designers of Docker assumed that in the normal case there is only a single process running inside a container. But ???
 
-This can be easily explained by the fact that a container is running only if
-there is a front process running. When run processes like Nginx or Apache which
-are designed to be run as daemons by defaults without doing anything special. The
-processes will start and right after they will stop and your container too.
+Docker is designed around this principle and as a consequence a container is running only if there is a foreground process running. When the foreground process stops, the container stops as well. 
 
-To avoid this behavior, you need to start your front process with a flag to avoid
-the process to run in daemon mode. In fact, HAProxy starts by default with a no
-daemon mode.
+When you normally run server software like Nginx or Apache, which are designed to be run as daemons, you run a command to start them. The command is a foreground process. What happens usually is that this process then forks a background process (the daemon) and exits. Thus when you run the command in a container the process starts and right after stops and your container stops, too.
 
-So, how can we do to run multiple processes inside one container. There we go for
-the `process managers` family. There is plenty of solution to manage the processes
-like `init.d`.
+To avoid this behavior, you need to start your foreground process with an option to avoid the process to fork a daemon, but continue running in foreground. In fact, HAProxy starts by default in this "no daemon" mode.
 
-In this lab, we will use a small one called `S6` http://skarnet.org/software/s6/.
-And more specifically, we will use https://github.com/just-containers/s6-overlay which
-bring some simplification of using `S6` in our containers. For more details about the
-features: https://github.com/just-containers/s6-overlay#features
+So, the question is now, how can we run multiple processes inside one container? The answer involves using an _init system_. An init system is usually part of an operating system where it manages deamons and coordinates the boot process. There are many different init systems, like _init.d_, _systemd_ and _Upstart_. Sometimes they are also called _process supervisors_.
 
-You have also a good explanation about the Docker way perception from the maintainers
- of `S6`: https://github.com/just-containers/s6-overlay#the-docker-way
+In this lab, we will use a small init system called `S6` <http://skarnet.org/software/s6/>.
+And more specifically, we will use the `s6-overlay` scripts <https://github.com/just-containers/s6-overlay> which
+simplify the use of `S6` in our containers. For more details about the
+features, see <https://github.com/just-containers/s6-overlay#features>
 
-This process manager will give us the possibility to start one or more process at
+Is this in line with the Docker philosophy? You have a good explanation of the `s6-overlay` maintainers' viewpoint here: <https://github.com/just-containers/s6-overlay#the-docker-way>
+
+The use of a process manager will give us the possibility to run one or more processes at
 a time in a Docker container. That's just what we need.
 
 So to add it to your images, you will find `TODO: [S6] Install` placeholders in
@@ -374,7 +348,7 @@ or you can use the script to start two base containers:
 /vagrant/start-containers.sh
 ```
 
-You can check the state of your containers as we already did it in previous task with `docker ps` which should results with something like that:
+You can check the state of your containers as we already did it in previous task with `docker ps` which should produce an output similar to the following:
 
 ```
 CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
@@ -387,7 +361,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
 
   - Later in this lab, the two scripts `start-containers.sh` and `build-images.sh`
     will be less relevant. During this lab, will build and run extensively the `ha`
-    proxy image. Get trained with the docker `build` and `run` commands.
+    proxy image. Get familiar with the docker `build` and `run` commands.
 
 **References**:
 
@@ -395,7 +369,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
   - [docker run](https://docs.docker.com/engine/reference/commandline/run/)
   - [docker rm](https://docs.docker.com/engine/reference/commandline/rm/)
 
-We need to configure `S6` as our main process and then replace the current ones. For that
+We need to configure `S6` as our main process and then replace the current one. For that
 we will update our Docker images [HAProxy](ha/Dockerfile#L47) and the [web application](webapp/Dockerfile#L38) and
 replace the: `TODO: [S6] Replace the following instruction` by the following Docker instruction:
 
@@ -415,8 +389,8 @@ It's the expected behavior for now as we just replaced the application process b
 the process manager one. We have a superb process manager up and running but no more
 application.
 
-To remedy to this situation, we will prepare the starting scripts for `S6` and to copy
-them at the right place. Once done, they will be automatically taken into account and
+To remedy to this situation, we will prepare the starting scripts for `S6` and copy
+them at the right place. Once we do this, they will be automatically taken into account and
 our applications will be available again.
 
 Let's start by creating a folder called `service` in `ha` and `webapp` folders. You can
@@ -531,7 +505,7 @@ to open http://192.168.42.42 and see the same content as the previous task.
 
 **Deliverables**:
 
-1. Take a screenshot of the stats page of HAProxy http://192.168.42.42:1936. You
+1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You
   should see your backend nodes. It should be probably really similar than the screenshot
   of previous task
 
@@ -544,7 +518,7 @@ to open http://192.168.42.42 and see the same content as the previous task.
 
 ## Task 2: Add a cluster membership management tool
 
-**Remarks**:
+**Remark**:
 
   - Do not forget to create a dedicated branch on your repo. On your host, you
     can do the following command assuming you are on `task-1` branch:
@@ -560,30 +534,28 @@ to open http://192.168.42.42 and see the same content as the previous task.
     git push -u origin task-2
     ```
 
-During this task, we will focus on how to make our infrastructure more flexible. To
-achieve this goal, we need a tool that allow each node to know about the other nodes.
+In this task, we will focus on how to make our infrastructure more flexible. To
+achieve this goal, we will use a tool that allows each node to know about the state of other nodes.
 
-We will use `Serf` for this. You can read more about this tool on https://www.serf.io/
+We will use `Serf` for this. You can read more about this tool at <https://www.serf.io/>.
 
-The idea is that each container will have a `serf agent` running on it. When a node
-appear or disappear, we will be able to react accordingly. `Serf` propagates events
-in its cluster and then each node can trigger scripts depending which event was fired.
+The idea is that each container will have a _serf agent_ running on it. When a node appears or disappears, we will be able to react accordingly. `Serf` propagates events in its cluster and then each node can trigger scripts depending on which event was fired.
 
 So in summary, in our infrastructure, we want the following:
 
 1. Start our load balancer (HAProxy) and let it stay alive forever (or at least for the longest uptime as possible).
 
-2. Start one or more backend nodes at anytime after the load balancer has been started
+2. Start one or more backend nodes at any time after the load balancer has been started.
 
-3. Make sure the load balancer knows about the nodes that appears and the nodes that disappear. For this,
+3. Make sure the load balancer knows about the nodes that appear and the nodes that disappear. For this,
   it means we want to react and reconfigure the load balancer accordingly to the topology state.
 
-On the paper, the things seems quite clear and easy but to achieve everything, it remains few
-steps to be ready. So we will start by installing `Serf` and see how it is working with simple events
+On paper, the things seems quite clear and easy but to achieve everything, there remain a few
+steps to be done before we are ready. So we will start by installing `Serf` and see how it is working with simple events
 and triggers.
 
 To install `Serf`, we have to add the following Docker instruction in the `ha`
-and `webapp` Docker files. Replace the `TODO: [Serf] Install` in
+and `webapp` Docker files. Replace the line `TODO: [Serf] Install` in
 [ha/Dockerfile](ha/Dockerfile#L13) and [webapp/Dockerfile](webapp/Dockerfile#L18)
 with the following instruction:
 
@@ -736,7 +708,7 @@ node.
 
   - Once the cluster is created in `Serf` agent, the first node which created
     the `Serf` cluster can leave the cluster. In fact, leaving the cluster will
-    not stop it as far as the `Serf` agent is running.
+    not stop it as long as the `Serf` agent is running.
 
     Anyway, in our current solution, there is kind of missconception around the
     way we create the `Serf` cluster. In the deliverables, describe which
@@ -764,7 +736,7 @@ them in a moment. These two scripts will manage the load balancer configuration.
 
 And finally, we set a tag `role=<rolename>` to our load balancer. The `$ROLE` is
 the environment variable that we have in the Docker files. With the role, we will
-be able to make the difference between the `balancer` and the `backend` nodes.
+be able to differentiate between the `balancer` and the `backend` nodes.
 
 ```bash
 --tag role=$ROLE
@@ -772,15 +744,15 @@ be able to make the difference between the `balancer` and the `backend` nodes.
 
 In fact, each node that will join or leave the `Serf` cluster will trigger a `join`,
 respectively `leave` events. It means that the handler scripts on the `ha` node
-will be called for all the nodes included itself. We want to avoid reconfiguring
-`ha` proxy when itself `join` or `leave` the `Serf` cluster.
+will be called for all the nodes, including itself. We want to avoid reconfiguring
+`ha` proxy when itself `join`s or `leave`s the `Serf` cluster.
 
 **References**:
 
-  - [serf agent](https://www.serf.io/docs/agent/basics.html)
-  - [event handlers](https://www.serf.io/docs/agent/event-handlers.html)
-  - [serf agent configuration](https://www.serf.io/docs/agent/options.html)
-  - [join -replay](https://www.serf.io/docs/commands/join.html#_replay)
+  - [Serf agent](https://www.serf.io/docs/agent/basics.html)
+  - [Event handlers](https://www.serf.io/docs/agent/event-handlers.html)
+  - [Serf agent configuration](https://www.serf.io/docs/agent/options.html)
+  - [Join -replay](https://www.serf.io/docs/commands/join.html#_replay)
 
 Let's prepare the same kind of configuration. Copy the `run` file you just created
 in `webapp/services/serf` and replace the content between `SERF START` and `SERF END`
@@ -796,11 +768,11 @@ COMMAND="$COMMAND --tag role=$ROLE"
 This time, we do not need to have event handlers for the backend nodes. The
 backend nodes will just appear and disappear at some point in the time and
 nothing else. The `$ROLE` is also replaced by the `-e "ROLE=backend"` from
-Docker `run` command.
+the Docker `run` command.
 
 Again, we need to update our Docker images to add the `Serf` service to `S6`.
 
-In both Docker image files in [ha](ha) and [webapp](webapp) folders,
+In both Docker image files, in the [ha](ha) and [webapp](webapp) folders,
 replace `TODO: [Serf] Add Serf S6 setup` by the following two Docker
 instructions:
 
