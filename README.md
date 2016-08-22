@@ -1114,8 +1114,8 @@ archive. So we need to add `xz-utils` to the `apt-get install` present above the
     have the following hierarchy for our HAProxy image.
 
     <p style="text-align:center;">
-      <a href="/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/blob/master/assets/img/image-hierarchy.png">
-        <img style="width:600px;" src="/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/raw/master/assets/img/image-hierarchy.png" alt="HAProxy Image Hierarchy">
+      <a href="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/blob/master/assets/img/image-hierarchy.png">
+        <img style="width:600px;" src="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/raw/master/assets/img/image-hierarchy.png" alt="HAProxy Image Hierarchy">
       </a>
     </p>
 
