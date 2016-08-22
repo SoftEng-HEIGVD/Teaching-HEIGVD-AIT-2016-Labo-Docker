@@ -51,6 +51,34 @@ should be quick if you already completed the lab on load balancing):
 - It's really important to make each task in a separate branch. In doubt,
   ask us. Non-respect of this point will be penalized.
 
+  There is a summary of the commands you probably need to create a branch and
+  work on it (replace `<taskNumber>` by the corresponding number):
+
+  ```bash
+  # Create and checkout the branch
+  git checkout -b task-<taskNumber>
+
+  # Keep track of your branch on GitHub
+  git push -u origin task-<taskNumber>
+  ```
+
+  And the commands to track your changes, commit them and push to the GitHub
+  remote repo (replace `<your commit message>` by your **relevant** commit messge).
+
+  ```bash
+  # Add all the untracked files
+  git add .
+
+  # Commit your files
+  git commit -m "<your commit message>"
+
+  # Push your work on GitHub
+  git push
+  ```
+
+  You will need to repeat quite often those commands to create and manage a
+  branch per task.
+
 - The images and web application are a bit different from the lab on load
   balancing. The web app does no longer require a tag. An environment variable
   is defined in the Docker files to specify a role for each image. We will see
@@ -94,34 +122,50 @@ Based on the previous lab, answer the following questions. The questions are num
 from `M1` to `Mn` to refer to them later in the lab. Please, in your report, give
 the reference of the question when you answer them.
 
-1. [M1] Do you think the solution is usable in a production environment ? Details
-  your answer.
+1. <a name="M1"></a>**[M1]** What are the main problems of the current solution for a production
+  environment? Do you think we can use this solution for a production environment?
 
-2. [M2] Describe what you need to do to add new `webapp` container to the
+2. <a name="M2"></a>**[M2]** Describe what you need to do to add new `webapp` container to the
   infrastructure. Give the exact steps of what you have to do without modifiying
-  the way the things are done.
+  the way the things are done. Hint: You probably have to modify some
+  configuration and script files in a Docker images.
 
-2. [M3] What are the main problems of the current solution for a production
-  environment ?
+3. <a name="M3"></a>**[M3]** Based on your previous answers, you have detected some issues on the
+  current solution. Then, can you propose your approach in high level details.
+
+4. <a name="M4"></a>**[M4]** You probably noticed that we have the list of web application nodes
+  hardcoded. How can we manage the web app nodes in a more dynamic fashion?
+
+5. <a name="M5"></a>**[M5]** In traditional infrastructures with physical or virtual machines, we
+  have a lot of side processes to manage a machine properly.
+
+  For example, it is common to collect in one centralized place all the logs
+  from several machines. Therefore, for that, we need something on each machine
+  that will send to centralized place all the collected logs. We can also think
+  that a tool will gather the logs of each machine. That's a push vs. pull
+  problem. It's quite common to see a push mechanism for this kind of task.
+
+  Do you think our current solution is able to accomplish that? If no, what is
+  missing / required to reach the goal? If yes, how do proceed to collect the
+  logs?
+
+  6. <a name="M6"></a>**[M6]** In our current solution, we have a fake approach
+    of real dynamic configuration management. If we take a closer look to the
+    `run.sh` script, we will set two calls to `sed` which in fact will replace
+    two lines in the `haproxy.cfg` configuration file just before we start
+    `haproxy` when the `ha` container start. You clearly see that the
+    configuration file has two lines and the script will replace these two
+    lines.
+
+    What happens if we want more nodes? Do you think it is really dynamic? It's
+    only a far far approach of a dynamic configuration. Can you propose a
+    solution to solve this?
 
 ## Task 0: Install the tools
 
-**Remarks**:
-
-- Do not forget to create a dedicated branch on your repo. On your host, you can run the following command, assuming you have already cloned your fork and you are on the master branch:
-
-  **Warning**: If you prefer to push all your work only when you reach the end of the lab, you can skip the `push` commands and run them only at the end. It's a way to keep your solution secret, but on the other hand you will not have a backup.
-
-  ```
-  # Go to the folder where you have cloned the repo
-  cd <root folder of your repository>
-
-  # Create and checkout the branch
-  git checkout -b task-0
-
-  # Keep track of your branch on GitHub
-  git push -u origin task-0
-  ```
+> This task will ensure that your setup is ready to run Vagrant VM with the
+  previous lab Docker containers. The Docker images are a little bit different
+  from the previous lab and we will work with these images during this lab.
 
 You should have done this already in the lab of HAProxy. But if not, here are the installation instructions.
 
@@ -197,21 +241,6 @@ You can now navigate to the address of the load balancer <http://192.168.42.42>
 in your favorite browser. The load balancer forwards your HTTP request to one
 of the web app containers.
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-0` branch, you can run the following commands (**replace the commit message with your own message**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You should see your backend nodes.
@@ -220,21 +249,10 @@ of the web app containers.
 
 ## Task 1: Add a process supervisor to your images
 
-**Remarks**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can run the following command assuming you are on `task-0` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-1
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-1
-    ```
+> In this task, we will learn to install a process supervisor that will help us
+  to solve the issue presented in the question [M5](#M5). Installing a process
+  supervisor let us the possibility to run multiple processes at the same time
+  in a Docker environment.
 
 A central piece of the Docker design is the principle (which for some people is a big limitation):
 
@@ -450,22 +468,6 @@ RUN chmod +x /etc/services.d/node/run
 Build again your images and run them. If everything is working fine, you should be able
 to open http://192.168.42.42 and see the same content as the previous task.
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-1` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You
@@ -481,21 +483,10 @@ to open http://192.168.42.42 and see the same content as the previous task.
 
 ## Task 2: Add a cluster membership management tool
 
-**Remark**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-1` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-2
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-2
-    ```
+> Installing a cluster membership management tool will help us to solve the
+  problem we detected in [M4](#M4). In fact, we will start to use what we put
+  in place with the [M5](#M5) resolution. We will build two images with our
+  process supervisor running a Serf agent.
 
 In this task, we will focus on how to make our infrastructure more flexible. To
 achieve this goal, we will use a tool that allows each node to know about the state of other nodes.
@@ -883,22 +874,6 @@ docker run -d --network heig --name s1 softengheigvd/webapp
     rm -r /vagrant/webapp/scripts
     ```
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-2` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`. You need to
@@ -925,21 +900,12 @@ docker run -d --network heig --name s1 softengheigvd/webapp
 
 ## Task 3: Play with handler scripts
 
-**Remarks**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-3` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-3
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-3
-    ```
+> Serf is really simple to use as it let the user to write their own shell
+  scripts to react to the cluster events. During this task, we will start
+  gently to write the mandatory handler scripts we need to build our solution.
+  We will start by just logging members that join the cluster and the members
+  that leave the cluster. We are preparing to solve concretely the issue
+  discovered in [M4](#M4).
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
 really dynamic. At the moment, we are missing the scripts that will manage the events
@@ -1063,22 +1029,6 @@ Once you have finished, you have simply to type `exit` in the container to quit
 your shell session and at the same time the container. The container itself will
 continue to run.
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-3` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`.
@@ -1091,21 +1041,13 @@ continue to run.
 
 ## Task 4: Play with a template engine
 
-**Remarks**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-4` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-4
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-4
-    ```
+> To manage a configuration dynamically, we have several possibility but we
+  have chosen the way of templates. In this task, we will put in place a
+  template engine and use it with a basic example. We will not become experts
+  in template engines but it will give you a great taste of applying a technique
+  usually used in different contexts (like web templates, mail templates, ...)
+  to manage a configuration. We will be able to solve the issue raised in
+  [M6](#M6).
 
 There are several ways to regenerate a configuration and to fill it with real values
 in a dynamic fashion. In this lab, we decided to use `NodeJS` and `Handlebars` for the
@@ -1302,22 +1244,6 @@ cat /tmp/haproxy.cfg
 exit
 ```
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-4` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. You probably noticed when we added `xz-utils`, we have to rebuild the whole image
@@ -1356,21 +1282,12 @@ exit
 
 ## Task 5: Generate the HAProxy config based on Serf events
 
-**Remarks**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-5` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-5
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-5
-    ```
+> With S6 and Serf ready in our HAProxy image. With the member join/leave
+  handler scripts and the handlebars template engine. We have all the pieces
+  ready to generate the HAProxy configuration dynamically. We will update
+  our handler scripts to manage the list of nodes and to generate the
+  HAProxy configuration each time the cluster has a member leave/join event.
+  The modification in this task will let us solving the problem in [M4](#M4).
 
 At this stage, we have:
 
@@ -1570,22 +1487,6 @@ file and also the list of backend nodes. Use the previous command to reach this 
 (**keep track of the output of the ls command and the configuration file
 like the logs in previous tasks**)
 
-**Remarks**:
-
-  - Do not forget to commit your changes. Assuming your are in your `task-5` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
 **Deliverables**:
 
 1. Give the branch for the current task
@@ -1603,21 +1504,12 @@ like the logs in previous tasks**)
 
 ## Task 6: Make everything working like a charm
 
-**Remarks**:
-
-  - Do not forget to create a dedicated branch on your repo. On your host, you
-    can do the following command assuming you are on `task-6` branch:
-
-    ```
-    # Go to the folder where you have cloned the repo
-    cd <root folder of your repository>
-
-    # Create and checkout the branch
-    git checkout -b task-6
-
-    # Keep track of your branch on GitHub
-    git push -u origin task-6
-    ```
+> Finally, we have all the required stuff to finish our solution. HAProxy will
+  be reconfigured automatically in regard of the web app nodes leaving/joining
+  the cluster. We will solve the problems you have discussed in [M1 - 3](#M1).
+  Again, the solution built during this lab is one example of tools and
+  techniques we can use to solve this kind of sitatuation. There are several
+  other ways.
 
 We have all the pieces ready to work and we just need to make sure the configuration
 of HAProxy is up-to-date and taken into account by HAProxy.
@@ -1734,24 +1626,10 @@ restart inside the container and your web application is also taking time to
 bootstrap. And finally, depending of the health checks of HAProxy, your web
 app will not be available instantly.
 
-**Remarks**:
+Finally, we achieved our goal to build an architecture that is dynamic and react
+to new nodes and nodes that are leaving.
 
-  - Do not forget to commit your changes. Assuming your are in your `task-6` branch,
-    you can do the following commands (**replace the commit message by yours**):
-
-    ```
-    # Add all the untracked files
-    git add .
-
-    # Commit your files
-    git commit -m "<your commit message>"
-
-    # Push your work on GitHub
-    git push
-    ```
-
-  - If you are ready to deliver your work and you have not yet published all your
-    work, it's time to push each of your branch.
+![Final architecture](screenshots/task-6/final-architecture.png)
 
 **Deliverables**:
 
