@@ -1629,7 +1629,7 @@ app will not be available instantly.
 Finally, we achieved our goal to build an architecture that is dynamic and react
 to new nodes and nodes that are leaving.
 
-![Final architecture](screenshots/task-6/final-architecture.png)
+![Final architecture](assets/img/final-architecture.png)
 
 **Deliverables**:
 
