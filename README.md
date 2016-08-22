@@ -149,17 +149,17 @@ the reference of the question when you answer them.
   missing / required to reach the goal? If yes, how do proceed to collect the
   logs?
 
-  6. <a name="M6"></a>**[M6]** In our current solution, we have a fake approach
-    of real dynamic configuration management. If we take a closer look to the
-    `run.sh` script, we will set two calls to `sed` which in fact will replace
-    two lines in the `haproxy.cfg` configuration file just before we start
-    `haproxy` when the `ha` container start. You clearly see that the
-    configuration file has two lines and the script will replace these two
-    lines.
+6. <a name="M6"></a>**[M6]** In our current solution, we have a fake approach
+  of real dynamic configuration management. If we take a closer look to the
+  `run.sh` script, we will set two calls to `sed` which in fact will replace
+  two lines in the `haproxy.cfg` configuration file just before we start
+  `haproxy` when the `ha` container start. You clearly see that the
+  configuration file has two lines and the script will replace these two
+  lines.
 
-    What happens if we want more nodes? Do you think it is really dynamic? It's
-    only a far far approach of a dynamic configuration. Can you propose a
-    solution to solve this?
+  What happens if we want more nodes? Do you think it is really dynamic? It's
+  only a far far approach of a dynamic configuration. Can you propose a
+  solution to solve this?
 
 ## Task 0: Install the tools
 
