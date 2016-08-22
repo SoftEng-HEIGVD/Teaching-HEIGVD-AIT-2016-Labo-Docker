@@ -1113,11 +1113,9 @@ archive. So we need to add `xz-utils` to the `apt-get install` present above the
     model. You can inherit only from one super class at a time. For example, we
     have the following hierarchy for our HAProxy image.
 
-    <p style="text-align:center;">
-      <a href="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/blob/master/assets/img/image-hierarchy.png">
-        <img src="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/raw/master/assets/img/image-hierarchy.png" alt="HAProxy Image Hierarchy" width="600">
-      </a>
-    </p>
+    <a href="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/blob/master/assets/img/image-hierarchy.png">
+      <img src="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/raw/master/assets/img/image-hierarchy.png" alt="HAProxy Image Hierarchy" width="600">
+    </a>
 
     There is the `FROM` Docker documentation reference:
 
