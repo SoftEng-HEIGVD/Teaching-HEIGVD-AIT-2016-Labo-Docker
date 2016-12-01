@@ -1,14 +1,20 @@
-title: Lab ? - Docker
+title: Lab 04 - Docker
 ---
 
-# Lab ? - Docker
+## Lab 04 - Docker
 
 
-### Pedagogical objectives
+#### Pedagogical objectives
 
 * Build your own Docker images
 
-* Understand core concepts for scaling of an application in production
+* Become familiar with lightweight process supervision for Docker
+
+* Understand core concepts for dynamic scaling of an application in production
+
+* Put into practice decentralized management of web server instances
+
+#### Instructions for the lab report
 
 This lab builds on a previous lab on load balancing.
 
@@ -21,89 +27,66 @@ We expect you to have in your repository (you will get the instructions later
 for that) a folder called `report` and a folder called `logs`. Ideally, your
 report should be in Markdown format directly in the repository.
 
-The lab will consist of 6 tasks and one initial task (the initial task should
+The lab consists of 6 tasks and one initial task (the initial task
 should be quick if you already completed the lab on load balancing):
 
-0. [Install the tools](#task-0-install-the-tools)
-1. [Add a process supervisor to your images](#task-1-add-a-process-manager-to-your-images)
-2. [Add a cluster membership management tool](#task-2-add-a-cluster-membership-management-tool)
-3. [Play with handler scripts](#task-3-play-with-handler-scripts)
-4. [Play with a template engine](#task-4-play-with-a-template-engine)
-5. [Generate the HAProxy config based on Serf events](#task-5-generate-the-haproxy-config-based-on-serf-events)
-6. [Make everything working like a charm](#task-6-make-everything-working-like-a-charm)
+0. [Identify issues and install the tools](#task-0)
+1. [Add a process supervisor to run several processes](#task-1)
+2. [Add a tool to manage membership in the web server cluster](#task-2)
+3. [React to membership changes](#task-3)
+4. [Use a template engine to easily generate configuration files](#task-4)
+5. [Generate a new load balancer configuration when membership changes](#task-5)
+6. [Make the load balancer automatically reload the new configuration](#task-6)
 
 **Remarks**:
 
-- Use the Task numbers and question numbers in reference in your report.
+- In your report reference the task numbers and question numbers of
+  this document.
 
-- The version of HAProxy used in this lab is `1.5`. When reading the doc, take care to read the doc corresponding to this version. Here is the link: <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>
+- The version of HAProxy used in this lab is `1.5`. When reading the
+  documentation, make sure you are looking at this version. Here is
+  the link:
+  <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>
 
-  **Warning**: There is an exception for that later in the lab. The
-               documentation for a part of HAProxy (the command line help) is
-               not available in 1.5. Therefore, we use the doc for 1.6 which is
-               not different for our usage.
+  **Note**: There is an exception for that later in the lab. The
+  documentation for a part of HAProxy (the command line help) is not
+  available in 1.5. Therefore, we use the doc for 1.6 which is not
+  different for our usage.
 
-- You must give the URL of the repository that you forked off this lab.
+- In the report give the URL of the repository that you forked off this lab.
 
-- You must create one branch per task (from task 1, no branch for task 0). You
-  can take a look on the small [Git reference guide](git quick reference.md).
-
-- It's really important to make each task in a separate branch. In doubt,
-  ask us. Non-respect of this point will be penalized.
-
-  There is a summary of the commands you probably need to create a branch and
-  work on it (replace `<taskNumber>` by the corresponding number):
-
-  ```bash
-  # Create and checkout the branch
-  git checkout -b task-<taskNumber>
-
-  # Keep track of your branch on GitHub
-  git push -u origin task-<taskNumber>
-  ```
-
-  And the commands to track your changes, commit them and push to the GitHub
-  remote repo (replace `<your commit message>` by your **relevant** commit messge).
-
-  ```bash
-  # Add all the untracked files
-  git add .
-
-  # Commit your files
-  git commit -m "<your commit message>"
-
-  # Push your work on GitHub
-  git push
-  ```
-
-  You will need to repeat quite often those commands to create and manage a
-  branch per task.
-
-- The images and web application are a bit different from the lab on load
-  balancing. The web app does no longer require a tag. An environment variable
+- The images and the web application are a bit different from the lab on load
+  balancing. The web app no longer requires a tag. An environment variable
   is defined in the Docker files to specify a role for each image. We will see
-  later how use that.
+  later how to use that.
 
 - We expect, at least, to see in your report:
 
   - An introduction describing briefly the lab
 
-  - A chapter whit the answer of the first questions
-
-  - Six chapters, one for each task
+  - Seven chapters, one for each task (0 to 6)
 
   - A table of content
 
-  - A chapter named "Difficulties" where you describe the problems and
-    solutions you have encountered
+  - A chapter named "Difficulties" where you describe the problems you have encountered and
+    the solutions you found
 
   - A conclusion
 
-**DISCLAIMER**: In this lab, we will go through one possible approach to manage a scalable infrastructure where we can add and remove nodes without having to rebuild the HAProxy image. This is not the only way to achieve this goal. If you do some research, you will find a lot of tools and services to achieve the same kind of behavior.
+**DISCLAIMER**: In this lab, we will go through one possible approach
+to manage a scalable infrastructure where we can add and remove nodes
+without having to rebuild the HAProxy image. This is not the only way
+to achieve this goal. If you do some research you will find a lot of
+tools and services to achieve the same kind of behavior.
 
-In the previous lab, we have built an architecture with a load balancer and two
-web applications. The architecture of our distributed web application is shown
-in the following diagram:
+
+### <a name="task-0"></a>Task 0: Identify issues and install the tools
+
+#### Identify issues
+
+In the previous lab, we built a simple distributed system with a load
+balancer and two web applications. The architecture of our distributed
+web application is shown in the following diagram:
 
 ![Architecture](assets/img/initial-architecture.png)
 
@@ -114,62 +97,92 @@ container exposes TCP port 3000 to receive HTTP requests.
 The HAProxy load balancer is listening on TCP port 80 to receive HTTP
 requests from users. These requests will be forwarded to and
 load-balanced between the web app containers. Additionally it exposes
-TCP ports 1936 and 9999 which we will cover later.
+TCP ports 1936 and 9999 for the stats page and the command-line
+interface.
 
-For more details about the web application, take a look to the [previous lab](https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2015-Labo-02)
+For more details about the web application, take a look to the
+[previous lab](https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2015-Labo-02).
 
-Based on the previous lab, answer the following questions. The questions are numbered
-from `M1` to `Mn` to refer to them later in the lab. Please, in your report, give
-the reference of the question when you answer them.
+Now suppose you are working for a big e-tailer like Galaxus or
+Zalando. Starting with Black Friday and throughout the holiday season
+you see traffic to your web servers increase several times as
+customers are looking for and buying presents. In January the traffic
+drops back again to normal. You want to be able to add new servers as
+the traffic from customers increases and you want to be able to remove
+servers as the traffic goes back to normal.
 
-1. <a name="M1"></a>**[M1]** What are the main problems of the current solution for a production
-  environment? Do you think we can use this solution for a production environment?
+Suppose further that there is an obscure bug in the web application
+that the developers haven't been able to understand yet. It makes the
+web servers crash unpredictably several times per week. When you
+detect that a web server has crashed you kill its container and you
+launch a new container.
 
-2. <a name="M2"></a>**[M2]** Describe what you need to do to add new `webapp` container to the
-  infrastructure. Give the exact steps of what you have to do without modifiying
-  the way the things are done. Hint: You probably have to modify some
-  configuration and script files in a Docker images.
+Suppose further currently your web servers and your load balancer are
+deployed like in the previous lab. What are the issues with this
+architecture? Answer the following questions. The questions are
+numbered from `M1` to `M6` to refer to them later in the lab. Please
+give in your report the reference of the question you are answering.
 
-3. <a name="M3"></a>**[M3]** Based on your previous answers, you have detected some issues on the
-  current solution. Then, can you propose your approach in high level details.
+1. <a name="M1"></a>**[M1]** Do you think we can use the current
+   solution for a production environment? What are the main problems
+   when deploying it in a production environment?
 
-4. <a name="M4"></a>**[M4]** You probably noticed that we have the list of web application nodes
-  hardcoded. How can we manage the web app nodes in a more dynamic fashion?
+2. <a name="M2"></a>**[M2]** Describe what you need to do to add new
+   `webapp` container to the infrastructure. Give the exact steps of
+   what you have to do without modifiying the way the things are
+   done. Hint: You probably have to modify some configuration and
+   script files in a Docker image.
 
-5. <a name="M5"></a>**[M5]** In traditional infrastructures with physical or virtual machines, we
-  have a lot of side processes to manage a machine properly.
+3. <a name="M3"></a>**[M3]** Based on your previous answers, you have
+   detected some issues in the current solution. Now propose a better
+   approach at a high level.
 
-  For example, it is common to collect in one centralized place all the logs
-  from several machines. Therefore, for that, we need something on each machine
-  that will send to centralized place all the collected logs. We can also think
-  that a tool will gather the logs of each machine. That's a push vs. pull
-  problem. It's quite common to see a push mechanism for this kind of task.
+4. <a name="M4"></a>**[M4]** You probably noticed that the list of web
+  application nodes is hardcoded in the load balancer
+  configuration. How can we manage the web app nodes in a more dynamic
+  fashion?
 
-  Do you think our current solution is able to accomplish that? If no, what is
-  missing / required to reach the goal? If yes, how do proceed to collect the
-  logs?
+5. <a name="M5"></a>**[M5]** In the physical or virtual machines of a
+   typical infrastructure we tend to have not only one main process
+   (like the web server or the load balancer) running, but a few
+   additional processes on the side to perform management tasks.
 
-6. <a name="M6"></a>**[M6]** In our current solution, we have a fake approach
-  of real dynamic configuration management. If we take a closer look to the
-  `run.sh` script, we will set two calls to `sed` which in fact will replace
-  two lines in the `haproxy.cfg` configuration file just before we start
-  `haproxy` when the `ha` container start. You clearly see that the
-  configuration file has two lines and the script will replace these two
-  lines.
+   For example to monitor the distributed system as a whole it is
+   common to collect in one centralized place all the logs produced by
+   the different machines. Therefore we need a process running on each
+   machine that will forward the logs to the central place. (We could
+   also imagine a central tool that reaches out to each machine to
+   gather the logs. That's a push vs. pull problem.) It is quite
+   common to see a push mechanism used for this kind of task.
 
-  What happens if we want more nodes? Do you think it is really dynamic? It's
-  only a far far approach of a dynamic configuration. Can you propose a
-  solution to solve this?
+   Do you think our current solution is able to run additional
+   management processes beside the main web server / load balancer
+   process in a container? If no, what is missing / required to reach
+   the goal? If yes, how to proceed to run for example a log
+   forwarding process?
 
-## Task 0: Install the tools
+6. <a name="M6"></a>**[M6]** In our current solution, although the
+   load balancer configuration is changing dynamically, it doesn't
+   follow dynamically the configuration of our distributed system when
+   web servers are added or removed. If we take a closer look at the
+   `run.sh` script, we see two calls to `sed` which will replace two
+   lines in the `haproxy.cfg` configuration file just before we start
+   `haproxy`. You clearly see that the configuration file has two
+   lines and the script will replace these two lines.
 
-> This task will ensure that your setup is ready to run Vagrant VM with the
-  previous lab Docker containers. The Docker images are a little bit different
-  from the previous lab and we will work with these images during this lab.
+   What happens if we add more web server nodes? Do you think it is
+   really dynamic? It's far away from being a dynamic
+   configuration. Can you propose a solution to solve this?
 
-You should have done this already in the lab of HAProxy. But if not, here are the installation instructions.
+#### Install the tools
 
-Install on your local machine Vagrant to create a virtual environment. We provide scripts for installing and running Docker inside this virtual environment:
+> In this part of the task you will set up Vagrant with Docker
+  containers like in the previous lab. The Docker images are a little
+  bit different from the previous lab and we will work with these
+  images during this lab.
+
+You should have installed Vagrant already in the previous lab. If not,
+download and install from:
 
 * [Vagrant](https://www.vagrantup.com/)
 
@@ -243,45 +256,71 @@ of the web app containers.
 
 **Deliverables**:
 
-1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You should see your backend nodes.
+1. Take a screenshot of the stats page of HAProxy at
+   <http://192.168.42.42:1936>. You should see your backend nodes.
 
-2. Give your repository URL as we can navigate your branches.
+2. Give the URL of your repository URL in the lab report.
 
-## Task 1: Add a process supervisor to your images
 
-> In this task, we will learn to install a process supervisor that will help us
-  to solve the issue presented in the question [M5](#M5). Installing a process
-  supervisor let us the possibility to run multiple processes at the same time
-  in a Docker environment.
+### <a name="task-1"></a>Task 1: Add a process supervisor to run several processes
 
-A central piece of the Docker design is the principle (which for some people is a big limitation):
+> In this task, we will learn to install a process supervisor that
+  will help us to solve the issue presented in the question
+  [M5](#M5). Installing a process supervisor gives us the ability to
+  run multiple processes at the same time in a Docker environment.
+
+A central tenet of the Docker design is the following principle (which
+for some people is a big limitation):
 
   > One process per container
 
-This means that the designers of Docker assumed that in the normal case there is only a single process running inside a container. But ???
+This means that the designers of Docker assumed that in the normal
+case there is only a single process running inside a container. They
+designed everything around this principle. Consequently they decided
+that that a container is running only if there is a foreground process
+running. When the foreground process stops, the container
+automatically stops as well.
 
-Docker is designed around this principle and as a consequence a container is running only if there is a foreground process running. When the foreground process stops, the container stops as well.
+When you normally run server software like Nginx or Apache, which are
+designed to be run as daemons, you run a command to start them. The
+command is a foreground process. What happens usually is that this
+process then forks a background process (the daemon) and exits. Thus
+when you run the command in a container the process starts and right
+after stops and your container stops, too.
 
-When you normally run server software like Nginx or Apache, which are designed to be run as daemons, you run a command to start them. The command is a foreground process. What happens usually is that this process then forks a background process (the daemon) and exits. Thus when you run the command in a container the process starts and right after stops and your container stops, too.
+To avoid this behavior, you need to start your foreground process with
+an option to avoid the process to fork a daemon, but continue running
+in foreground. In fact, HAProxy starts by default in this "no daemon"
+mode.
 
-To avoid this behavior, you need to start your foreground process with an option to avoid the process to fork a daemon, but continue running in foreground. In fact, HAProxy starts by default in this "no daemon" mode.
+So, the question is now, how can we run multiple processes inside one
+container? The answer involves using an _init system_. An init system
+is usually part of an operating system where it manages deamons and
+coordinates the boot process. There are many different init systems,
+like _init.d_, _systemd_ and _Upstart_. Sometimes they are also called
+_process supervisors_.
 
-So, the question is now, how can we run multiple processes inside one container? The answer involves using an _init system_. An init system is usually part of an operating system where it manages deamons and coordinates the boot process. There are many different init systems, like _init.d_, _systemd_ and _Upstart_. Sometimes they are also called _process supervisors_.
+In this lab, we will use a small init system called `S6`
+<http://skarnet.org/software/s6/>.  And more specifically, we will use
+the `s6-overlay` scripts
+<https://github.com/just-containers/s6-overlay> which simplify the use
+of `S6` in our containers. For more details about the features, see
+<https://github.com/just-containers/s6-overlay#features>.
 
-In this lab, we will use a small init system called `S6` <http://skarnet.org/software/s6/>.
-And more specifically, we will use the `s6-overlay` scripts <https://github.com/just-containers/s6-overlay> which
-simplify the use of `S6` in our containers. For more details about the
-features, see <https://github.com/just-containers/s6-overlay#features>
+Is this in line with the Docker philosophy? You have a good
+explanation of the `s6-overlay` maintainers' viewpoint here:
+<https://github.com/just-containers/s6-overlay#the-docker-way>
 
-Is this in line with the Docker philosophy? You have a good explanation of the `s6-overlay` maintainers' viewpoint here: <https://github.com/just-containers/s6-overlay#the-docker-way>
+The use of a process supervisor will give us the possibility to run
+one or more processes at a time in a Docker container. That's just
+what we need.
 
-The use of a process supervisor will give us the possibility to run one or more processes at
-a time in a Docker container. That's just what we need.
+So to add it to your images, you will find `TODO: [S6] Install`
+placeholders in the Docker images of [HAProxy](ha/Dockerfile#L11) and
+the [web application](webapp/Dockerfile#L16)
 
-So to add it to your images, you will find `TODO: [S6] Install` placeholders in
-the Docker images of [HAProxy](ha/Dockerfile#L11) and the [web application](webapp/Dockerfile#L16)
-
-Replace the `TODO: [S6] Install` with the following Docker instruction:
+Replace the `TODO: [S6] Install` with the following Docker
+instruction:
 
 ```
 # Download and install S6 overlay
@@ -290,10 +329,12 @@ RUN curl -sSLo /tmp/s6.tar.gz https://github.com/just-containers/s6-overlay/rele
   && rm -f /tmp/s6.tar.gz
 ```
 
-Take the opportunity to change the `MAINTAINER` of the image by your name and email.
-Replace in both Docker files the `TODO: [GEN] Replace with your name and email`.
+Take the opportunity to change the `MAINTAINER` of the image by your
+name and email.  Replace in both Docker files the `TODO: [GEN] Replace
+with your name and email`.
 
-To build your images, run the following commands inside your Vagrant VM instance:
+To build your images, run the following commands inside your Vagrant
+VM instance:
 
 ```bash
 # Build the haproxy image
@@ -318,10 +359,10 @@ or use the script which do the same for you:
 
 **Remarks**:
 
-  - If you run your containers right now, you will notice that there is no
-    difference between now and the previous state of our images. It's normal as
-    we do not have configured anything for `S6` and we do not start it in
-    the container.
+  - If you run your containers right now, you will notice that there
+    is no difference from the previous state of our images. That is
+    normal as we do not have configured anything for `S6` and we do
+    not start it in the container.
 
 To start the containers, first you need to stop the current containers and remove
 them. You can do that with the following commands:
@@ -342,7 +383,9 @@ or you can use the script to start two base containers:
 /vagrant/start-containers.sh
 ```
 
-You can check the state of your containers as we already did it in previous task with `docker ps` which should produce an output similar to the following:
+You can check the state of your containers as we already did it in
+previous task with `docker ps` which should produce an output similar
+to the following:
 
 ```
 CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS                                                                NAMES
@@ -355,7 +398,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
 
   - Later in this lab, the two scripts `start-containers.sh` and `build-images.sh`
     will be less relevant. During this lab, will build and run extensively the `ha`
-    proxy image. Get familiar with the docker `build` and `run` commands.
+    proxy image. Become familiar with the docker `build` and `run` commands.
 
 **References**:
 
@@ -363,9 +406,12 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
   - [docker run](https://docs.docker.com/engine/reference/commandline/run/)
   - [docker rm](https://docs.docker.com/engine/reference/commandline/rm/)
 
-We need to configure `S6` as our main process and then replace the current one. For that
-we will update our Docker images [HAProxy](ha/Dockerfile#L47) and the [web application](webapp/Dockerfile#L38) and
-replace the: `TODO: [S6] Replace the following instruction` by the following Docker instruction:
+We need to configure `S6` as our main process and then replace the
+current one. For that we will update our Docker images
+[HAProxy](ha/Dockerfile#L47) and the
+[web application](webapp/Dockerfile#L38) and replace the: `TODO: [S6]
+Replace the following instruction` by the following Docker
+instruction:
 
 ```
 # This will start S6 as our main process in our container
@@ -376,25 +422,28 @@ ENTRYPOINT ["/init"]
 
   - [ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#/entrypoint)
 
-You can build and run the updated images (use the commands already provided earlier).
-As you can observe if you try to go to http://192.168.42.42, there is nothing live.
+You can build and run the updated images (use the commands already
+provided earlier).  As you can observe if you try to go to
+http://192.168.42.42, there is nothing live.
 
-It's the expected behavior for now as we just replaced the application process by
-the process supervisor one. We have a superb process supervisor up and running but no more
-application.
+It's the expected behavior for now as we just replaced the application
+process by the process supervisor one. We have a superb process
+supervisor up and running but no more application.
 
-To remedy to this situation, we will prepare the starting scripts for `S6` and copy
-them at the right place. Once we do this, they will be automatically taken into account and
-our applications will be available again.
+To remedy to this situation, we will prepare the starting scripts for
+`S6` and copy them at the right place. Once we do this, they will be
+automatically taken into account and our applications will be
+available again.
 
-Let's start by creating a folder called `service` in `ha` and `webapp` folders. You can
-use the above commands (do this command in your Vagrant VM):
+Let's start by creating a folder called `service` in `ha` and `webapp`
+folders. You can use the above commands (do this command in your
+Vagrant VM):
 
 ```bash
 mkdir -p /vagrant/ha/services/ha /vagrant/webapp/services/node
 ```
 
-You should have the following folders structure:
+You should have the following folder structure:
 
 ```
 |-- Root directory
@@ -413,15 +462,17 @@ You should have the following folders structure:
     |-- run.sh
 ```
 
-We need to copy the `run.sh` scripts as `run` files in the service directories.
-You can achieve that by the following commands (do these commands in your Vagrant VM):
+We need to copy the `run.sh` scripts as `run` files in the service
+directories.  You can achieve that by the following commands (do these
+commands in your Vagrant VM):
 
 ```bash
 cp /vagrant/ha/scripts/run.sh /vagrant/ha/services/ha/run && chmod +x /vagrant/ha/services/ha/run
 cp /vagrant/webapp/scripts/run.sh /vagrant/webapp/services/node/run && chmod +x /vagrant/webapp/services/node/run
 ```
 
-Once copied, replace the hashbang instruction in both files. Replace the first line of the `run` script
+Once copied, replace the hashbang instruction in both files. Replace
+the first line of the `run` script
 
 ```bash
 #!/bin/sh
@@ -432,12 +483,15 @@ by:
 #!/usr/bin/with-contenv bash
 ```
 
-This will instruct `S6` to give the environment variables from the container to the run script.
+This will instruct `S6` to give the environment variables from the
+container to the run script.
 
-The start scripts are ready but now we must copy them to the right place in the Docker image. In both
-`ha` and `webapp` Docker files, you need to add a `COPY` instruction to setup the service correctly.
+The start scripts are ready but now we must copy them to the right
+place in the Docker image. In both `ha` and `webapp` Docker files, you
+need to add a `COPY` instruction to setup the service correctly.
 
-In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two following instructions` by
+In `ha` Docker file, you need to replace: `TODO: [S6] Replace the two
+following instructions` by
 
 ```
 # Copy the S6 service and make the run script executable
@@ -445,7 +499,8 @@ COPY services/ha /etc/services.d/ha
 RUN chmod +x /etc/services.d/ha/run
 ```
 
-Do the same in the `webapp`Docker file with the following replacement: `TODO: [S6] Replace the two following instructions` by
+Do the same in the `webapp`Docker file with the following replacement:
+`TODO: [S6] Replace the two following instructions` by
 
 ```
 # Copy the S6 service and make the run script executable
@@ -465,53 +520,77 @@ RUN chmod +x /etc/services.d/node/run
     so make sure that we will never have issue with copy/paste of the file or
     transferring between unix world and windows world.
 
-Build again your images and run them. If everything is working fine, you should be able
-to open http://192.168.42.42 and see the same content as the previous task.
+Build again your images and run them. If everything is working fine,
+you should be able to open http://192.168.42.42 and see the same
+content as the previous task.
 
 **Deliverables**:
 
-1. Take a screenshot of the stats page of HAProxy at <http://192.168.42.42:1936>. You
-  should see your backend nodes. It should be probably really similar than the screenshot
-  of previous task
+1. Take a screenshot of the stats page of HAProxy at
+   <http://192.168.42.42:1936>. You should see your backend nodes. It
+   should be probably really similar than the screenshot of previous
+   task
 
 2. Give the name of the branch you do your current task
 
 3. Describe your difficulties for this task and your understanding of
-  what is happening during this task. Explain in your own words why are we
-  installing a process supervisor. Do not hesitate to do more researches and to
-  find more articles on that topic to illustrate the problem.
+   what is happening during this task. Explain in your own words why
+   are we installing a process supervisor. Do not hesitate to do more
+   research and to find more articles on that topic to illustrate the
+   problem.
 
-## Task 2: Add a cluster membership management tool
 
-> Installing a cluster membership management tool will help us to solve the
-  problem we detected in [M4](#M4). In fact, we will start to use what we put
-  in place with the [M5](#M5) resolution. We will build two images with our
-  process supervisor running a Serf agent.
+### <a name="task-2"></a>Task 2: Add a tool to manage membership in the web server cluster
 
-In this task, we will focus on how to make our infrastructure more flexible. To
-achieve this goal, we will use a tool that allows each node to know about the state of other nodes.
+> Installing a cluster membership management tool will help us to
+  solve the problem we detected in [M4](#M4). In fact, we will start
+  to use what we put in place with the solution to issue [M5](#M5). We
+  will build two images with our process supervisor running the
+  cluster membership management tool `Serf`.
 
-We will use `Serf` for this. You can read more about this tool at <https://www.serf.io/>.
+In this task, we will focus on how to make our infrastructure more
+flexible so that we can dynamically add and remove web servers. To
+achieve this goal, we will use a tool that allows each node to know
+which other nodes exist at any given time.
 
-The idea is that each container will have a _serf agent_ running on it. When a node appears or disappears, we will be able to react accordingly. `Serf` propagates events in its cluster and then each node can trigger scripts depending on which event was fired.
+We will use `Serf` for this. You can read more about this tool at
+<https://www.serf.io/>.
+
+The idea is that each container will have a _Serf agent_ running on
+it, the webapp containers and the load balancer container. The Serf
+agents talk to each other using a decentralized peer-to-peer protocol
+to exchange information. They form a cluster of nodes. The main
+information they exchange is the existence of nodes in the cluster and
+what their IP addresses are. When a node appears or disappears the
+Serf agents tell each other about the event. When the information
+arrives at the load balancer we will be able to react accordingly. A
+Serf agents can trigger the execution of local scripts when it
+receives an event.
 
 So in summary, in our infrastructure, we want the following:
 
-1. Start our load balancer (HAProxy) and let it stay alive forever (or at least for the longest uptime as possible).
+1. Start our load balancer (HAProxy) and let it stay alive forever (or
+   at least for the longest uptime as possible).
 
-2. Start one or more backend nodes at any time after the load balancer has been started.
+2. Start one or more backend nodes at any time after the load balancer
+   has been started.
 
-3. Make sure the load balancer knows about the nodes that appear and the nodes that disappear. For this,
-  it means we want to react and reconfigure the load balancer accordingly to the topology state.
+3. Make sure the load balancer knows about the nodes that appear and
+   the nodes that disappear. We want to be able to react when a new
+   web server becomes online or disappears and reconfigure the load
+   balancer based on the current state of our web server topology.
 
-On paper, the things seems quite clear and easy but to achieve everything, there remain a few
-steps to be done before we are ready. So we will start by installing `Serf` and see how it is working with simple events
-and triggers.
+In theory this seems quite clear and easy but to achieve everything,
+there remain a few steps to be done before we are ready. So we will
+start in this task by installing `Serf` and see how it is working with
+simple events and triggers, without changing yet the load balancer
+configuration. The tasks 3 to 6 will deal the latter part.
 
-To install `Serf`, we have to add the following Docker instruction in the `ha`
-and `webapp` Docker files. Replace the line `TODO: [Serf] Install` in
-[ha/Dockerfile](ha/Dockerfile#L13) and [webapp/Dockerfile](webapp/Dockerfile#L18)
-with the following instruction:
+To install `Serf` we have to add the following Docker instruction in
+the `ha` and `webapp` Docker files. Replace the line `TODO: [Serf]
+Install` in [ha/Dockerfile](ha/Dockerfile#L13) and
+[webapp/Dockerfile](webapp/Dockerfile#L18) with the following
+instruction:
 
 ```
 # Install serf (for decentralized cluster membership: https://www.serf.io/)
@@ -522,10 +601,10 @@ RUN mkdir /opt/bin \
     && rm -f /tmp/serf.gz
 ```
 
-You can build your images as we did in the previous task. As expected, nothing new
-is happening when we run our updated images. `Serf` will not start before we add
-the proper service into `S6`. The next steps will allow us to have the following
-containers:
+You can build your images as we did in the previous task. As expected,
+nothing new is happening when we run our updated images. `Serf` will
+not start before we add the proper service into `S6`. The next steps
+will allow us to have the following containers:
 
 ```
 HAProxy container
@@ -539,12 +618,13 @@ WebApp containers
     -> Serf process
 ```
 
-Each container will run a `S6` main process with, at least, two processes that are
-our application processes and `Serf` processes.
+Each container will run a `S6` main process with, at least, two
+processes that are our application processes and `Serf` processes.
 
-To start `Serf`, we need to create the proper service for `S6`. Let's do that with
-the creation of the service folder in `ha/services` and `webapp/services`. Use the
-following command to do that (run this command in your Vagrant VM).
+To start `Serf`, we need to create the proper service for `S6`. Let's
+do that with the creation of the service folder in `ha/services` and
+`webapp/services`. Use the following command to do that (run this
+command in your Vagrant VM).
 
 ```bash
 mkdir /vagrant/ha/services/serf /vagrant/webapp/services/serf
@@ -571,21 +651,22 @@ You should have the following folders structure:
     |-- run.sh
 ```
 
-In each directory, create an executable file called `run`. You can achieve that
-by the following commands:
+In each directory, create an executable file called `run`. You can
+achieve that by the following commands:
 
 ```bash
 touch /vagrant/ha/services/serf/run && chmod +x /vagrant/ha/services/serf/run
 touch /vagrant/webapp/services/serf/run && chmod +x /vagrant/webapp/services/serf/run
 ```
 
-In the `ha/services/serf/run` file, add the following script. This will start and
-enable the capabilities of `Serf` on the load balancer. Do not pay attention of the
-tricky part of the script about the process management. You can read the comments
-and ask us fore more info if you want.
+In the `ha/services/serf/run` file, add the following script. This
+will start and enable the capabilities of `Serf` on the load
+balancer. You can ignore the tricky part of the script about process
+management. You can look at the comments and ask us fore more info if
+you are interested.
 
-The principal part between `SERF START` and `SERF END` is the command we prepare
-to run the serf agent.
+The principal part between `SERF START` and `SERF END` is the command
+we prepare to run the serf agent.
 
 ```bash
 #!/usr/bin/with-contenv bash
@@ -593,16 +674,17 @@ to run the serf agent.
 # ##############################################################################
 # WARNING
 # ##############################################################################
-# S6 expects to manage that reacts to SIGTERM signal to be stopped. Serf agent
-# does not support SIGTERM signal to be stopped properly.
+# S6 expects the processes it manages to stop when it sends them a SIGTERM signal.
+# The Serf agent does not stop properly when receiving a SIGTERM signal.
 #
-# Therefore, we need a tricky approach to remedy the situation. We need to
-# "simulate" the SIGTERM and to quit Serf correctly.
+# Therefore, we need to do some tricks to remedy the situation. We need to
+# "simulate" the handling of SIGTERM in the script and send to Serf the signal
+# that makes it quit (SIGINT).
 #
-# Basically, there are the steps we need:
+# Basically we need to do the following:
 # 1. Keep track of the process id (PID) of Serf Agent
-# 2. Catch the SIGTERM from S6 and transform it to another mechanism to Serf
-# 3. Make sure this shell script will never end before S6 stop it but when
+# 2. Catch the SIGTERM from S6 and send a SIGINT to Serf
+# 3. Make sure this shell script will not stop before S6 stops it, but when
 #    SIGTERM is sent, we need to stop everything.
 
 # Get the current process ID to avoid killing an unwanted process
@@ -649,8 +731,8 @@ pid=$!
 wait
 ```
 
-Let's take the time to analyze the `Serf` agent command. We launch the `Serf` agent
-with the command:
+Let's take the time to analyze the `Serf` agent command. We launch the
+`Serf` agent with the command:
 
 ```bash
 serf agent
@@ -679,13 +761,13 @@ node.
     the `Serf` cluster can leave the cluster. In fact, leaving the cluster will
     not stop it as long as the `Serf` agent is running.
 
-    Anyway, in our current solution, there is kind of missconception around the
+    Anyway, in our current solution, there is kind of misconception around the
     way we create the `Serf` cluster. In the deliverables, describe which
     problem exists with the current solution based on the previous explanations and
     remarks. Propose a solution to solve the issue.
 
 To make sure that `ha` load balancer can leave and enter the cluster again, we add
-the `--replay` option. This will allow to replay the past events and then react to
+the `--replay` option. This will make the Serf agent replay the past events and then react to
 these events. In fact, due to the problem you have to guess, this will probably not
 be really useful.
 
@@ -735,7 +817,7 @@ COMMAND="$COMMAND --tag role=$ROLE"
 ```
 
 This time, we do not need to have event handlers for the backend nodes. The
-backend nodes will just appear and disappear at some point in the time and
+backend nodes will just appear and disappear at some point in time and
 nothing else. The `$ROLE` is also replaced by the `-e "ROLE=backend"` from
 the Docker `run` command.
 
@@ -758,7 +840,7 @@ EXPOSE 7946 7373
   - [EXPOSE](https://docs.docker.com/engine/reference/builder/#/expose)
 
 It's time to build the images and to run the containers. You can use the provided scripts
-run the command manually. At this stage, you should have your application running as the
+or run the command manually. At this stage, you should have your application running as the
 `Serf` agents. To ensure that, you can access http://192.168.42.42 to see if you backends
 are responding and you can check the Docker logs to see what is happening. Simply run:
 
@@ -782,7 +864,7 @@ You will notice the following in the logs (or something similar).
 This means that our nodes are not joining the `Serf` cluster and more important
 cannot resolve the DNS names of the nodes.
 
-You can do a simple experiment to see you yourself there is no name resolution.
+You can do a simple experiment to see yourself that there is no name resolution.
 Connect to a container and run a ping command.
 
 ```bash
@@ -797,16 +879,16 @@ The problem is due to the latest versions of Docker where the networking have
 been totally reworked.
 
 In latest Docker versions, the network part was totally rewritten and changed
-a lot. In fact, the default networks we have used until now seen their behavior
+a lot. In fact, the default networks we have used until now have seen their behavior
 changed.
 
 Previously, these default networks embedded automatically the DNS resolution for
-the network where the containers are attached but this is not no more the case.
+the network where the containers are attached but this is not no longer the case.
 
-To solve this issue, we need to go a little more deeper in Docker commands and we
+To solve this issue, we need to go a little deeper in Docker commands and we
 need to create our own Docker network. For that, we will use the following command.
 Creating a bridged network with Docker that is not the default one, automatically
-embedded a DNS resolution.
+embedding a DNS resolution.
 
 ```bash
 docker network create --driver bridge heig
@@ -822,13 +904,13 @@ If you want to know more about Docker networking, take the time to read the diff
 pages in the references. Docker team provide a good overview and lot of details about
 this important topic.
 
-From now, to start our containers, we need to add the following argument to the `docker run` command
+From now on, to start our containers, we need to add the following argument to the `docker run` command
 
 ```bash
 --network heig
 ```
 
-So to start the `ha` container the command become:
+So to start the `ha` container the command becomes:
 
 ```bash
 docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --link s1 --link s2 --name ha softengheigvd/ha
@@ -876,40 +958,43 @@ docker run -d --network heig --name s1 softengheigvd/webapp
 
 **Deliverables**:
 
-1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`. You need to
-  create a folder logs in your repository to track the files aside the report. Create a folder
-  per task for the logs and name it from the task number. No need to create folder when no logs.
+1. Provide the docker log output for each of the containers: `ha`,
+   `s1` and `s2`. You need to create a folder `logs` in your
+   repository to store the files separately from the lab
+   report. For each lab task create a folder and name it using the
+   task number. No need to create a folder when there are no logs.
 
-  Example:
+   Example:
 
-  ```
-  |-- root folder
-    |-- logs
-      |-- task 1
-      |-- task 3
-      |-- ...
-  ```
+   ```
+   |-- root folder
+     |-- logs
+       |-- task 1
+       |-- task 3
+       |-- ...
+   ```
 
-2. Give the name of the branch for the current task
+2. Give the answer to the question about the existing problem with the
+   current solution.
 
-3. Give the answer to the question about the existing problem with the current solution
+3. Give an explanation on how `Serf` is working. Read the official
+   website to get more details about the `GOSSIP` protocol used in
+   `Serf`. Try to find other solutions that can be used to solve
+   similar situations where we need some auto-discovery mechanism.
 
-4. Give an explanation on how `Serf` is working. Read the official website to get more
-  details about the `GOSSIP` protocol used in `Serf`. Try to find other solutions
-  that can be used to solve such situation where we need some auto-discovery mechanism.
 
-## Task 3: Play with handler scripts
+### <a name="task-3"></a>Task 3: React to membership changes
 
-> Serf is really simple to use as it let the user to write their own shell
-  scripts to react to the cluster events. During this task, we will start
-  gently to write the mandatory handler scripts we need to build our solution.
+> Serf is really simple to use as it lets the user write their own shell
+  scripts to react to the cluster events. In this task we will
+  write the first bits and pieces of the handler scripts we need to build our solution.
   We will start by just logging members that join the cluster and the members
   that leave the cluster. We are preparing to solve concretely the issue
   discovered in [M4](#M4).
 
 We reached a state where we have nearly all the pieces in place to make the infrastructure
-really dynamic. At the moment, we are missing the scripts that will manage the events
-of `Serf` and then react to member `leave` or member `join`.
+really dynamic. At the moment, we are missing the scripts that will react to the events
+reported by `Serf`, namely member `leave` or member `join`.
 
 We will start by creating the scripts in [ha/scripts](ha/scripts). So create two files in
 this directory and set them as executable. You can use these commands:
@@ -960,9 +1045,9 @@ done
 We have to update our Docker file for `ha` node. Replace the
 `TODO: [Serf] Copy events handler scripts` with appropriate content to:
 
-  1. Make sure there is directory `/serf-handlers`
-  2. The `member-join` and `member-leave` scripts are placed in this folder
-  3. Both of the scripts are executable
+  1. Make sure there is a directory `/serf-handlers`.
+  2. The `member-join` and `member-leave` scripts are placed in this folder.
+  3. Both of the scripts are executable.
 
 Stop all your containers to have a fresh state:
 
@@ -978,9 +1063,10 @@ cd /vagrant/ha
 docker build -t softengheigvd/ha .
 ```
 
-From there, you will be notified when you need to keep track of the logs. The logs
-will be asked as a deliverable of the lab. You will notice: (**keep logs**) to remind
-you to keep them for the report.
+From now on, we will ask you to systematically keep the logs and copy
+them into your repository as a lab deliverable.  Whenever you see the
+notice (**keep logs**) after a command, copy the logs into the
+repository.
 
 Run the `ha` container first and capture the logs with `docker logs` (**keep the logs**).
 
@@ -988,8 +1074,8 @@ Run the `ha` container first and capture the logs with `docker logs` (**keep the
 docker run -d -p 80:80 -p 1936:1936 -p 9999:9999 --network heig --name ha softengheigvd/ha
 ```
 
-Now, one of the two backend containers and capture the logs (**keep the logs**). Quite quickly after
-started the container, capture also the logs of `ha` node (**keep the logs**).
+Now, run one of the two backend containers and capture the logs (**keep the logs**). Shortly after
+starting the container capture also the logs of the `ha` node (**keep the logs**).
 
 ```bash
 docker run -d --network heig --name s1 softengheigvd/webapp
@@ -999,13 +1085,13 @@ docker run -d --network heig --name s2 softengheigvd/webapp
 **Remarks**:
 
   - You probably noticed that we removed the `links` to container `s1` and `s2`.
-    In few words, we will not rely on that mechanism for the next steps and for
-    the moment, the communication between the reverse proxy and the backend
+    The reason is that we will not rely on that mechanism for the next steps. For
+    the moment the communication between the reverse proxy and the backend
     nodes is broken.
 
 Once started, get the logs (**keep the logs**) of the backend container.
 
-To check there is something happening on the node `ha`, you will need to connect
+To check there is something happening on the node `ha` you will need to connect
 to the running container to gather the custom log file that is created in the
 handler scripts. For that, use the following command to connect to `ha`
 container in interactive mode.
@@ -1031,15 +1117,14 @@ continue to run.
 
 **Deliverables**:
 
-1. Provides the docker logs output for each of the containers:  `ha`, `s1` and `s2`.
-  Put your logs in the logs folder you created in the previous task.
+1. Provide the docker log output for each of the containers:  `ha`, `s1` and `s2`.
+   Put your logs in the `logs` directory you created in the previous task.
 
-2. Give the branch name of the current task
+3. Provide the logs from the `ha` container gathered directly from the `/var/log/serf.log`
+   file present in the container. Put the logs in the `logs` directory in your repo.
 
-3. Provide the logs from `ha` container gathered directly from the `/var/log/serf.log`
-  file present in the container. Put the logs in the logs directory in your repo.
 
-## Task 4: Play with a template engine
+### <a name="task-4"></a>Task 4: Use a template engine to easily generate configuration files
 
 > To manage a configuration dynamically, we have several possibility but we
   have chosen the way of templates. In this task, we will put in place a
@@ -1282,7 +1367,8 @@ exit
 5. Based on the three output files gathered, what can you tell about the way we
   generate it? What is the problem if any?
 
-## Task 5: Generate the HAProxy config based on Serf events
+
+### <a name="task-5"></a>Task 5: Generate a new load balancer configuration when membership changes
 
 > With S6 and Serf ready in our HAProxy image. With the member join/leave
   handler scripts and the handlebars template engine. We have all the pieces
@@ -1504,7 +1590,7 @@ like the logs in previous tasks**)
   not need to implement it. You can also propose your own tools or the ones you
   discovered online. In that case, do not forget to cite your references.
 
-## Task 6: Make everything working like a charm
+### <a name="task-6"></a>Task 6: Make the load balancer automatically reload the new configuration
 
 > Finally, we have all the required stuff to finish our solution. HAProxy will
   be reconfigured automatically in regard of the web app nodes leaving/joining
@@ -1645,9 +1731,6 @@ to new nodes and nodes that are leaving.
 
 3. Present a live demo where you add and remove a backend container.
 
-## Lab due date
-
-Deliver your results at the latest 15 minutes before class TBD
 
 ## Windows troubleshooting
 
