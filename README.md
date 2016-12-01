@@ -397,7 +397,7 @@ d9a4aa8da49d        softengheigvd/webapp   "./run.sh"          22 seconds ago   
 **Remarks**:
 
   - Later in this lab, the two scripts `start-containers.sh` and `build-images.sh`
-    will be less relevant. During this lab, will build and run extensively the `ha`
+    will be less relevant. During this lab, we will build and run extensively the `ha`
     proxy image. Become familiar with the docker `build` and `run` commands.
 
 **References**:
@@ -522,18 +522,15 @@ RUN chmod +x /etc/services.d/node/run
 
 Build again your images and run them. If everything is working fine,
 you should be able to open http://192.168.42.42 and see the same
-content as the previous task.
+content as in the previous task.
 
 **Deliverables**:
 
 1. Take a screenshot of the stats page of HAProxy at
    <http://192.168.42.42:1936>. You should see your backend nodes. It
-   should be probably really similar than the screenshot of previous
-   task
+   should be really similar to the screenshot of the previous task.
 
-2. Give the name of the branch you do your current task
-
-3. Describe your difficulties for this task and your understanding of
+2. Describe your difficulties for this task and your understanding of
    what is happening during this task. Explain in your own words why
    are we installing a process supervisor. Do not hesitate to do more
    research and to find more articles on that topic to illustrate the
@@ -1126,27 +1123,29 @@ continue to run.
 
 ### <a name="task-4"></a>Task 4: Use a template engine to easily generate configuration files
 
-> To manage a configuration dynamically, we have several possibility but we
-  have chosen the way of templates. In this task, we will put in place a
-  template engine and use it with a basic example. We will not become experts
-  in template engines but it will give you a great taste of applying a technique
-  usually used in different contexts (like web templates, mail templates, ...)
-  to manage a configuration. We will be able to solve the issue raised in
-  [M6](#M6).
+> We have to generate a new configuration file for the load balancer each time 
+  a web server is added or removed. There are several ways to do this. Here we 
+  choose to go the way of templates. In this task we will put in place a
+  template engine and use it with a basic example. You will not become an expert
+  in template engines but it will give you a taste of how to apply this technique
+  which is often used in other contexts (like web templates, mail templates, ...).
+  We will be able to solve the issue raised in [M6](#M6).
 
-There are several ways to regenerate a configuration and to fill it with real values
-in a dynamic fashion. In this lab, we decided to use `NodeJS` and `Handlebars` for the
-template engine.
+There are several ways to generate a configuration file from variables
+in a dynamic fashion. In this lab we decided to use `NodeJS` and
+`Handlebars` for the template engine.
 
 According to Wikipedia:
 
-  > a template engine is a software designed to combine one or more templates
+  > A template engine is a software designed to combine one or more templates
     with a data model to produce one or more result documents
 
-In our case, our template is the `HAProxy` configuration file with the template engine
-language placeholders and the configuration is the resulted document after the processing
-done by the template engine. And finally, our data model is the data provided by the
-handlers scripts from `Serf`.
+In our case our template is the `HAProxy` configuration file in which
+we put placeholders written in the template language. Our data model
+is the data provided by the handler scripts of `Serf`. And the
+resulting document coming out of the template engine is a
+configuration file that HA proxy can understand where the placeholders
+have been replaced with the data.
 
 **References**:
 
@@ -1154,10 +1153,11 @@ handlers scripts from `Serf`.
   - [Handlebars](http://handlebarsjs.com/)
   - [Template Engine definition](https://en.wikipedia.org/wiki/Template_processor)
 
-To be able to use `Handlebars` as a template engine in our `ha` container, we need
-to install `NodeJS` and `Handlebars`.
+To be able to use `Handlebars` as a template engine in our `ha`
+container, we need to install `NodeJS` and `Handlebars`.
 
-To install `NodeJS`, just replace `TODO: [HB] Install NodeJS` by the following content:
+To install `NodeJS`, just replace `TODO: [HB] Install NodeJS` by the
+following content:
 
 ```
 # Install NodeJS
@@ -1166,49 +1166,53 @@ RUN curl -sSLo /tmp/node.tar.xz https://nodejs.org/dist/v4.4.4/node-v4.4.4-linux
   && rm -f /tmp/node.tar.xz
 ```
 
-We also need to update the base tools installed in the image to be able to extract the `NodeJS`
-archive. So we need to add `xz-utils` to the `apt-get install` present above the line
-`TODO: [HB] Update to install required tool to install NodeJS`.
+We also need to update the base tools installed in the image to be
+able to extract the `NodeJS` archive. So we need to add `xz-utils` to
+the `apt-get install` present above the line `TODO: [HB] Update to
+install required tool to install NodeJS`.
 
 **Remarks**:
 
-  - You probably noticed that we have the backend image with a `NodeJS` application.
-    So the image already contains `NodeJS`. We have based our backend image on an
-    existing image that provide an installation of `NodeJS`. In our `ha` image,
-    we take a shortcut and do a manual installation of `NodeJS` with at least one
-    bad practice.
+  - You probably noticed that we have the webapp image with a `NodeJS`
+    application.  So the image already contains `NodeJS`. We have
+    based our backend image on an existing image that provides an
+    installation of `NodeJS`. In our `ha` image, we take a shortcut
+    and do a manual installation of `NodeJS`.
 
-    In the original image of `NodeJS` the download of the required files and then
-    check the downloads against `GPG` signatures. We have skipped this part in
-    our `ha`image but in practice, you should check everything you do to avoid
-    issues like the `man in the middle` attack.
+    This manual install has at least one bad practice: In the original
+    image of `NodeJS` they download of the required files and then
+    check the downloads against a `GPG` signatures. We have skipped
+    this part in our `ha`image, but in practice you should check every
+    download to avoid issues like the `man in the middle` attack.
 
-    You can take a look to the following links if you want:
+    You can take a look at the following links if you are interested
+    in this topic:
 
       - [NodeJS official Dockerfile](https://github.com/nodejs/docker-node/blob/ae9e2d4f04a0fa82261df86fd9556a76cefc020d/6.3/wheezy/Dockerfile#L4-L26)
       - [GPG](https://en.wikipedia.org/wiki/GNU_Privacy_Guard)
       - [Man in the middle attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)
 
-    The other reason why we have to manually install `NodeJS` by hand is that we
-    cannot inherit from two images at the same time. As in our `ha` image, we
-    already come `FROM` the `haproxy` official image, then we cannot use
-    the `NodeJS` at the same time.
+    The other reason why we have to manually install `NodeJS` is that
+    we cannot inherit from two images at the same time. As in our `ha`
+    image we already inherit `FROM` the `haproxy` official image we
+    cannot use the `NodeJS` image at the same time.
 
-    In fact, the `FROM` instruction from Docker can be see like Java Inheritance
-    model. You can inherit only from one super class at a time. For example, we
-    have the following hierarchy for our HAProxy image.
+    In fact, the `FROM` instruction from Docker works like the Java
+    inheritance model. You can inherit only from one super class at a
+    time. For example, we have the following hierarchy for our HAProxy
+    image.
 
     <a href="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/blob/master/assets/img/image-hierarchy.png">
       <img src="https://github.com/SoftEng-HEIGVD/Teaching-HEIGVD-AIT-2016-Labo-Docker/raw/master/assets/img/image-hierarchy.png" alt="HAProxy Image Hierarchy" width="600">
     </a>
 
-    There is the `FROM` Docker documentation reference:
+    Here is the reference to the Docker documentation of the `FROM` command:
 
       - [FROM](https://docs.docker.com/engine/reference/builder/#/from)
 
-It's time to install `Handlebars` and a small command line util to make it working
-properly. For that, replace the `TODO: [HB] Install Handlebars and cli` by this
-Docker instruction:
+It's time to install `Handlebars` and a small command line tool
+`handlebars-cmd` to make it work properly. For that replace the `TODO:
+[HB] Install Handlebars and cli` by this Docker instruction:
 
 ```
 # Install the handlebars-cmd node module and its dependencies
@@ -1217,10 +1221,11 @@ RUN npm install -g handlebars-cmd
 
 **Remarks**:
 
-  - [NPM](http://npmjs.org/) is a package manager for `NodeJS`. Like other package
-    manager, one of his tasks is to manage the dependencies of any package. That's
-    the reason why we have only to install `handlebars-cmd`. This package has
-    `handlebars` as its dependencies.
+  - [NPM](http://npmjs.org/) is a package manager for `NodeJS`. Like
+    other package managers, one of its tasks is to manage the
+    dependencies of a package. That's the reason why we have to
+    install only `handlebars-cmd`. This package has the `handlebars`
+    package as one of its dependencies.
 
 Now we will update the handler scripts to use `Handlebars`. For the moment, we
 will just play with a simple template. So, first create a file in `ha/config` called
@@ -1260,7 +1265,7 @@ done
 ```
 
 <a name="ttb"></a>
-Time to build our `ha` image and to run it. We will also run `s1` and `s2`. As usual, there
+Time to build our `ha` image and run it. We will also run `s1` and `s2`. As usual, here
 are the commands to build and run our image and containers:
 
 ```bash
@@ -1294,14 +1299,16 @@ cat /tmp/haproxy.cfg
 
 **Remarks**:
 
-  - It can be really convenient to have two or more terminal with a ssh session
-    to your Vagrant VM. With multiple session you can keep your connection to
-    `ha` container alive during you start your backend nodes.
+  - It can be really convenient to have two or more terminals open in
+    parallel with a ssh session to your Vagrant VM. With multiple
+    sessions you can keep your connection to `ha` container alive
+    while you start your backend nodes.
 
-    To open another ssh session to Vagrant, simply run `vagrant ssh` in the root
-    directory of your repository from another terminal tab/window.
+    To open another ssh session to Vagrant, simply run `vagrant ssh`
+    in the root directory of your repository from another terminal
+    tab/window.
 
-And quit the container with `exit`.
+After you have inspected the generated file quit the container with `exit`.
 
 Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
 
@@ -1333,11 +1340,12 @@ exit
 
 **Deliverables**:
 
-1. You probably noticed when we added `xz-utils`, we have to rebuild the whole image
-  which took some time. What can we do to mitigate that? You can take a look on
-  the Docker documentation about the [image layers](https://docs.docker.com/engine/userguide/storagedriver/imagesandcontainers/#images-and-layers).
-  Tell us about the pros and cons to merge as much as possible of the command. In
-  fact, argument about:
+1. You probably noticed when we added `xz-utils`, we have to rebuild
+   the whole image which took some time. What can we do to mitigate
+   that? Take a look at the Docker documentation on
+   [image layers](https://docs.docker.com/engine/userguide/storagedriver/imagesandcontainers/#images-and-layers).
+   Tell us about the pros and cons to merge as much as possible of the
+   command. In other words, compare:
 
   ```
   RUN command 1
@@ -1351,47 +1359,50 @@ exit
   RUN command 1 && command 2 && command 3
   ```
 
-  There are also some articles about techniques to reduce the image size. Try to
-  find them. They are talking about `squashing` or `flattening` images.
+  There are also some articles about techniques to reduce the image
+  size. Try to find them. They are talking about `squashing` or
+  `flattening` images.
 
-2. Propose a different approach to architecture our images to be able to reuse
-  as much as possible what we have done. Your proposition should also take care
-  to avoid as much as possible the repetition between your images.
+2. Propose a different approach to architecture our images to be able
+   to reuse as much as possible what we have done. Your proposition
+   should also try to avoid as much as possible repetitions between
+   your images.
 
-3. Give the branch for the current task
+3. Provide the `/tmp/haproxy.cfg` file generated in the `ha` container
+   after each step.  Place the output into the `logs` folder like you
+   already did for the Docker logs in the previous tasks.
 
-4. Give the `/tmp/haproxy.cfg` generated in the `ha` container after each steps.
-  Place the output into the logs folder like you already done for the Docker logs
-  in the previous tasks.
-
-5. Based on the three output files gathered, what can you tell about the way we
-  generate it? What is the problem if any?
+4. Based on the three output files you have collected, what can you
+   say about the way we generate it? What is the problem if any?
 
 
 ### <a name="task-5"></a>Task 5: Generate a new load balancer configuration when membership changes
 
-> With S6 and Serf ready in our HAProxy image. With the member join/leave
-  handler scripts and the handlebars template engine. We have all the pieces
-  ready to generate the HAProxy configuration dynamically. We will update
-  our handler scripts to manage the list of nodes and to generate the
-  HAProxy configuration each time the cluster has a member leave/join event.
-  The modification in this task will let us solving the problem in [M4](#M4).
+> We now have S6 and Serf ready in our HAProxy image. We have member
+  join/leave handler scripts and we have the handlebars template
+  engine. So we have all the pieces ready to generate the HAProxy
+  configuration dynamically. We will update our handler scripts to
+  manage the list of nodes and to generate the HAProxy configuration
+  each time the cluster has a member leave/join event.  The work in
+  this task will let us solve the problem mentioned in [M4](#M4).
 
 At this stage, we have:
 
-  - Two images with `S6` process supervisor that starts `Serf agent` and an
-    `Application` (HAProxy or Node app)
+  - Two images with `S6` process supervisor that starts a Serf agent
+    and an "application" (HAProxy or Node web app).
 
-  - The `ha` image contains the required stuff to react to `Serf` events when a
-    container join or leave the `Serf` cluster
+  - The `ha` image contains the required stuff to react to `Serf`
+    events when a container joins or leaves the `Serf` cluster.
 
-  - A template engine in `ha` image ready to used to generate the HAProxy configuration
+  - A template engine in the `ha` image is ready to be used to
+    generate the HAProxy configuration file.
 
-Now, we need to refine our `join` and `leave` scripts to generate a proper HAProxy
-configuration file.
+Now, we need to refine our `join` and `leave` scripts to generate a
+proper HAProxy configuration file.
 
-First, we will copy/paste the content of [ha/config/haproxy.cfg](ha/config/haproxy.cfg)
-file into [ha/config/haproxy.cfg.hb](ha/config/haproxy.cfg.hb). You can simply
+First, we will copy/paste the content of the
+[ha/config/haproxy.cfg](ha/config/haproxy.cfg) file into the template
+[ha/config/haproxy.cfg.hb](ha/config/haproxy.cfg.hb). You can simply
 run the following command:
 
 ```bash
@@ -1411,7 +1422,7 @@ server {{ host }} {{ ip }}:3000 check
 
   - `each` iterates over a collection of data
 
-  - `{{` and `}}` are the bars that will be interpreted by `Handlebars`
+  - `{{` and `}}` are the bars that will be interpreted by `handlebars`
 
   - `host` and `ip` are the data contained in the JSON format of the collection
     that handlebars will receive. We will see that right after in the `member-join.sh`
@@ -1420,17 +1431,18 @@ server {{ host }} {{ ip }}:3000 check
 Our configuration template is ready. Let's update the `member-join.sh` script to
 generate the correct configuration.
 
-The mechanism in place to manage the `join` and `leave` events is the following:
+The mechanism to manage the `join` and `leave` events is the following:
 
-  1. We check if the event comes from a backend node (the role is used)
+  1. We check if the event comes from a backend node (the role is used).
 
-  2. We create a file with the hostname and ip of each backend node that join the cluster
+  2. We create a file with the hostname and IP address of each backend
+     node that joins the cluster.
 
-  3. We build the handlebars command to generate the new configuration from the list
-    of files that represent our backend nodes
+  3. We build the `handlebars` command to generate the new configuration from the list
+     of files that represent our backend nodes
 
-The same logic also apply when a node leave the cluster. In this case, the second step
-will remove the file with the node data.
+The same logic also applies when a node leaves the cluster. In this
+case, the second step will remove the file with the node data.
 
 In the file [ha/scripts/member-join.sh](ha/scripts/member-join.sh)
 replace the whole content by the following one. Take the time to read the comments.
@@ -1541,70 +1553,74 @@ fi
 
 **Remarks**:
 
-  - The way we keep track the backend nodes is pretty simple and make the assumption
-    there is no concurrency issue with `Serf`. That's reasonable enough to get a
-    quite simple solution.
+  - The way we keep track the backend nodes is pretty simple and makes
+    the assumption there is no concurrency issue with `Serf`. That's
+    reasonable enough to get a quite simple solution.
 
 **Cleanup**:
 
-  - In the main configuration file that is used for bootstrap HAProxy the first time
-    when there is no backend nodes, we have the list of servers that we used in the first
-    task and the previous lab. We can remove the list. So find `TODO: [CFG] Remove all the servers`
-    and remove the list of nodes.
+  - In the main configuration file that is used for bootstrapping
+    HAProxy the first time when there are no backend nodes, we have
+    the list of servers that we used in the first task and the
+    previous lab. We can remove the list. So find `TODO: [CFG] Remove
+    all the servers` and remove the list of nodes.
 
   - In [ha/services/ha/run](ha/services/ha/run), we can remove the two lines
     above `TODO: [CFG] Remove the following two lines`.
 
-We need to make sure the image has the folder `/nodes` created. In the Docker file,
-replace the `TODO: [CFG] Create the nodes folder` by the correct instruction to create
-the `/nodes` folder.
+We need to make sure the image has the folder `/nodes` created. In the
+Docker file, replace the `TODO: [CFG] Create the nodes folder` by the
+correct instruction to create the `/nodes` folder.
 
-We are ready to build and test our `ha` image. Let's proceed the same as the [previous task](#ttb).
-You should keep track the same outputs for the deliverables. Remind you that we have
-moved the file `/tmp/haproxy.cfg` to `/usr/local/etc/haproxy/haproxy.cfg`
-(**keep track of the config file like in previous step**).
+We are ready to build and test our `ha` image. Let's proceed like in
+the [previous task](#ttb).  You should provide the same outputs for
+the deliverables. Remember that we have moved the file
+`/tmp/haproxy.cfg` to `/usr/local/etc/haproxy/haproxy.cfg` (**keep
+track of the config file like in previous step**).
 
-You can also get the list of registered nodes from inside the `ha` container. Simply
-list the files from the directory `/nodes`.
-(**keep track of the output of the command like the logs in previous tasks**)
+You can also get the list of registered nodes from inside the `ha`
+container. Simply list the files from the directory `/nodes`.  (**keep
+track of the output of the command like the logs in previous tasks**)
 
 Now, use the Docker commands to stop `s1`.
 
-You can connect again to the `ha` container and get the haproxy configuration
-file and also the list of backend nodes. Use the previous command to reach this goal.
-(**keep track of the output of the ls command and the configuration file
-like the logs in previous tasks**)
+You can connect again to the `ha` container and get the haproxy
+configuration file and also the list of backend nodes. Use the
+previous command to reach this goal.  (**keep track of the output of
+the ls command and the configuration file like the logs in previous
+tasks**)
 
 **Deliverables**:
 
-1. Give the branch for the current task
+1. Provide the file `/usr/local/etc/haproxy/haproxy.cfg` generated in
+   the `ha` container after each step.
 
-2. Give the `/usr/local/etc/haproxy/haproxy.cfg` generated in the `ha` container after each steps
+2. Provide the list of files from the `/nodes` folder inside the `ha` container.
 
-3. Give the list of files from `/nodes` folder inside the `ha` container.
+3. Provide the configuration file after you stopped one container and
+   the list of nodes present in the `/nodes` folder.
 
-4. Give the configuration file after you stopped one container and the list of
-  nodes present in the `/nodes` folder.
-
-5. Propose a different approach to manage the list of backend nodes. You do
-  not need to implement it. You can also propose your own tools or the ones you
-  discovered online. In that case, do not forget to cite your references.
+4. Propose a different approach to manage the list of backend
+   nodes. You do not need to implement it. You can also propose your
+   own tools or the ones you discovered online. In that case, do not
+   forget to cite your references.
 
 ### <a name="task-6"></a>Task 6: Make the load balancer automatically reload the new configuration
 
-> Finally, we have all the required stuff to finish our solution. HAProxy will
-  be reconfigured automatically in regard of the web app nodes leaving/joining
-  the cluster. We will solve the problems you have discussed in [M1 - 3](#M1).
-  Again, the solution built during this lab is one example of tools and
-  techniques we can use to solve this kind of sitatuation. There are several
-  other ways.
+> Finally, we have all the pieces in place to finish our
+  solution. HAProxy will be reconfigured automatically when web app
+  nodes are leaving/joining the cluster. We will solve the problems
+  you have discussed in [M1 - 3](#M1).  Again, the solution built
+  in this lab is only one example of tools and techniques we can use to
+  solve this kind of situation. There are several other ways.
 
-We have all the pieces ready to work and we just need to make sure the configuration
-of HAProxy is up-to-date and taken into account by HAProxy.
+The only thing missing now is to make sure the configuration of
+HAProxy is up-to-date and taken into account by HAProxy.
 
-We will try to make HAProxy reload his config with the minimal downtime. At the moment,
-we will replace `TODO: [CFG] Replace this command` in [ha/services/ha/run](ha/services/ha/run)
-by the following script part. As usual, take the time to read the comments.
+We will try to make HAProxy reload his config with minimal
+downtime. At the moment, we will replace the line `TODO: [CFG] Replace
+this command` in [ha/services/ha/run](ha/services/ha/run) by the
+following script part. As usual, take the time to read the comments.
 
 ```bash
 #!/usr/bin/with-contenv bash
@@ -1612,26 +1628,24 @@ by the following script part. As usual, take the time to read the comments.
 # ##############################################################################
 # WARNING
 # ##############################################################################
-# S6 expects to manage that reacts to SIGTERM signal to be stopped. HAProxy
-# does not gracefully stop when he receives such signals. In place, the SIGUSR1
-# is used to do a graceful shutdown.
+# S6 expects the processes it manages to stop when it sends them a SIGTERM signal.
+# The Serf agent does not stop properly when receiving a SIGTERM signal.
 #
-# Therefore, we need a tricky approach to remedy the situation. We need to
-# "simulate" the SIGTERM and to quit HAProxy correctly. This trick is mainly
-# based on the same we applied for Serf. We will see in few lines where is the
-# difference.
+# Therefore, we need to do some tricks to remedy the situation. We need to
+# "simulate" the handling of SIGTERM in the script and send to Serf the signal
+# that makes it quit (SIGINT).
 #
-# Basically, there are the steps we need:
-# 1. Keep track of the process id (PID) of HAProxy
-# 2. Catch the SIGTERM from S6 and transform it to another mechanism to HAProxy
-# 3. Make sure this shell script will never end before S6 stop it but when
+# Basically we need to do the following:
+# 1. Keep track of the process id (PID) of Serf Agent
+# 2. Catch the SIGTERM from S6 and send a SIGINT to Serf
+# 3. Make sure this shell script will not stop before S6 stops it, but when
 #    SIGTERM is sent, we need to stop everything.
 
 # Get the current process ID to avoid killing an unwanted process
 pid=$$
 
-# Define a function to stop HAProxy process in a proper way. In
-# place, we will send a SIGUSR1 signal to the process to stop it correctly.
+# Define a function to kill the Serf process as Serf does not accept SIGTERM. In
+# place, we will send a SIGINT signal to the process to stop it correctly.
 sigterm() {
   kill -USR1 $pid
 }
@@ -1641,23 +1655,23 @@ trap sigterm SIGTERM
 
 # We need to keep track of the PID of HAProxy in a file for the restart process.
 # We are forced to do that because the blocking process for S6 is this shell
-# script. When we send to S6 a command to restart our process, we will loose
+# script. When we send to S6 a command to restart our process, we will lose
 # the value of the variable pid. The pid variable will stay alive until any
 # restart or stop from S6.
 #
-# In the case of the restart need to keep the HAProxy PID to give it back to
+# In the case of a restart we need to keep the HAProxy PID to give it back to
 # HAProxy. The comments on the HAProxy command will complete this exaplanation.
 if [ -f /var/run/haproxy.pid ]; then
     HANDOFFPID=`cat /var/run/haproxy.pid`
 fi
 
-# HAProxy allows to give the PID of current running processes via -sf/-st
-# argument. This will allow to start new HAProxy processes and to stop the
-# ones given in argument. With this approach, we can warranty a lower outage
-# when we restart HAProxy. It will stay alive until new processes are ready,
-# once the new processes are ready, the old ones can be stopped.
+# To kill an old HAProxy and start a new one with minimal outage 
+# HAProxy provides the -sf/-st command-line options. With these options 
+# one can give the PIDs of currently running HAProxy processes at startup.
+# This will start new HAProxy processes and when startup is complete
+# it send FINISH or TERMINATE signals to the ones given in the argument. 
 #
-# The HANDOFFPID keep track of the PID of HAProxy. We retrieve it from the
+# The HANDOFFPID keeps track of the PID of HAProxy. We retrieve it from the
 # the file we written the last time we (re)started HAProxy.
 exec haproxy -f /usr/local/etc/haproxy/haproxy.cfg -sf $HANDOFFPID &
 
@@ -1666,10 +1680,10 @@ exec haproxy -f /usr/local/etc/haproxy/haproxy.cfg -sf $HANDOFFPID &
 # to replace the SIGTERM.
 pid=$!
 
-# And write it a file to get it on next restart
+# And write it to a file to get it on next restart
 echo $pid > /var/run/haproxy.pid
 
-# Finally, we wait as S6 launch this shell script. This will simulate
+# Finally, we wait as S6 launches this shell script. This will simulate
 # a foreground process for S6. All that tricky stuff is required because
 # we use a process supervisor in a Docker environment. The applications need
 # to be adapted for such environments.
@@ -1678,8 +1692,8 @@ wait
 
 **Remarks**:
 
-  - In this lab, we will not do a real zero downtime (or nearly) HAProxy
-    restart. You will find an article about that in the references.
+  - In this lab, we do not achieve an HAProxy restart with _zero_
+    downtime. You will find an article about that in the references.
 
 **References**:
 
@@ -1707,27 +1721,29 @@ backend node. Let's start one container and try to reach the same URL.
 You can start the web application nodes. If everything works well, you could
 reach your backend application through the load balancer.
 
-And now you can start and stop the number of nodes you want to see the dynamic
-reconfiguration occurring. Keep in mind that HAProxy will take few seconds
-before nodes will be available. The reason is that HAProxy is not so quick to
-restart inside the container and your web application is also taking time to
-bootstrap. And finally, depending of the health checks of HAProxy, your web
-app will not be available instantly.
+And now you can start and stop any number of nodes you want! You will
+see the dynamic reconfiguration occurring. Keep in mind that HAProxy
+will take few seconds before nodes will be available. The reason is
+that HAProxy is not so quick to restart inside the container and your
+web application is also taking time to bootstrap. And finally,
+depending of the health checks of HAProxy, your web app will not be
+available instantly.
 
-Finally, we achieved our goal to build an architecture that is dynamic and react
-to new nodes and nodes that are leaving.
+Finally, we achieved our goal to build an architecture that is dynamic
+and reacts to nodes coming and going!
 
 ![Final architecture](assets/img/final-architecture.png)
 
 **Deliverables**:
 
 1. Take a screenshots of the HAProxy stat page showing more than 2 web
-  application running. Additional screenshots are welcome to see a sequence
-  of experimentations like shutting down a node and starting more nodes.
+   applications running. Additional screenshots are welcome to see a
+   sequence of experimentations like shutting down a node and starting
+   more nodes.
 
-2. Give your own feelings about the final solution. Propose improvements or ways
-  to do the things differently. If any, provides the links of your readings for
-  the improvements.
+2. Give your own feelings about the final solution. Propose
+   improvements or ways to do the things differently. If any, provide
+   references to your readings for the improvements.
 
 3. Present a live demo where you add and remove a backend container.
 
