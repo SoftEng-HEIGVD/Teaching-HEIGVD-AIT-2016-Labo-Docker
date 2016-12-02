@@ -1310,7 +1310,10 @@ cat /tmp/haproxy.cfg
 
 After you have inspected the generated file quit the container with `exit`.
 
-Now, do the same for `s1` and `s2` and retrieve the `haproxy.cfg` file.
+Now that we invoke the template engine from the handler script it is
+time to do an end-to-end test. Start the `s1` container, wait a bit,
+then retrieve the `haproxy.cfg` file from the `ha` container to see
+whether it saw `s1` coming up. Then do the same for `s2`:
 
 ```bash
 # 1) Run the S1 container
