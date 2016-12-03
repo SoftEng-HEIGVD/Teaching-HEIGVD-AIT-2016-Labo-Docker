@@ -1758,7 +1758,11 @@ and reacts to nodes coming and going!
    applications running. Additional screenshots are welcome to see a
    sequence of experimentations like shutting down a node and starting
    more nodes.
-
+   
+   Also provide the output of `docker ps` in a log file. At least 
+   one file is expected. You can provide one output per step of your
+   experimentation according to your screenshots.
+   
 2. Give your own feelings about the final solution. Propose
    improvements or ways to do the things differently. If any, provide
    references to your readings for the improvements.
