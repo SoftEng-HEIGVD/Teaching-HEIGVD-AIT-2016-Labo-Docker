@@ -809,7 +809,7 @@ by the following one:
 ```bash
 # We build the Serf command to run the agent
 COMMAND="/opt/bin/serf agent"
-COMMAND="$COMMAND --join serf-cluster"
+COMMAND="$COMMAND --join ha"
 COMMAND="$COMMAND --tag role=$ROLE"
 ```
 
