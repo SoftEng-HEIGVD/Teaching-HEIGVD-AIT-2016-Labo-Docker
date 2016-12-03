@@ -1584,7 +1584,8 @@ We are ready to build and test our `ha` image. Let's proceed like in
 the [previous task](#ttb).  You should provide the same outputs for
 the deliverables. Remember that we have moved the file
 `/tmp/haproxy.cfg` to `/usr/local/etc/haproxy/haproxy.cfg` (**keep
-track of the config file like in previous step**).
+track of the config file like in previous step and also the output of
+`docker ps` and `docker inspect <container>`**).
 
 You can also get the list of registered nodes from inside the `ha`
 container. Simply list the files from the directory `/nodes`.  (**keep
@@ -1601,12 +1602,21 @@ tasks**)
 **Deliverables**:
 
 1. Provide the file `/usr/local/etc/haproxy/haproxy.cfg` generated in
-   the `ha` container after each step.
+   the `ha` container after each step. Three files are expected.
+   
+   In addition, provide a log file containing the output of the 
+   `docker ps` console and another file (per container) with
+   `docker inspect <container>`. Four files are expected.
 
 2. Provide the list of files from the `/nodes` folder inside the `ha` container.
+   One file expected with the command output.
 
 3. Provide the configuration file after you stopped one container and
-   the list of nodes present in the `/nodes` folder.
+   the list of nodes present in the `/nodes` folder. One file expected
+   with the command output. Two files are expected.
+   
+    In addition, provide a log file containing the output of the 
+   `docker ps` console. One file expected.
 
 4. Propose a different approach to manage the list of backend
    nodes. You do not need to implement it. You can also propose your
