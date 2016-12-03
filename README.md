@@ -1373,8 +1373,13 @@ exit
 
 3. Provide the `/tmp/haproxy.cfg` file generated in the `ha` container
    after each step.  Place the output into the `logs` folder like you
-   already did for the Docker logs in the previous tasks.
-
+   already did for the Docker logs in the previous tasks. Three files
+   are expected.
+   
+   In addition, provide a log file containing the output of the 
+   `docker ps` console and another file (per container) with
+   `docker inspect <container>`. Four files are expected.
+   
 4. Based on the three output files you have collected, what can you
    say about the way we generate it? What is the problem if any?
 
