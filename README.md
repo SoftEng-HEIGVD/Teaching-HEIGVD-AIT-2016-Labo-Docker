@@ -1603,7 +1603,7 @@ tasks**)
 3. Provide the configuration file after you stopped one container and
    the list of nodes present in the `/nodes` folder.
 
-4. Propose a different approach to manage the list of backend
+4. (Optional:) Propose a different approach to manage the list of backend
    nodes. You do not need to implement it. You can also propose your
    own tools or the ones you discovered online. In that case, do not
    forget to cite your references.
@@ -1748,7 +1748,7 @@ and reacts to nodes coming and going!
    improvements or ways to do the things differently. If any, provide
    references to your readings for the improvements.
 
-3. Present a live demo where you add and remove a backend container.
+3. (Optional:) Present a live demo where you add and remove a backend container.
 
 
 ## Windows troubleshooting
