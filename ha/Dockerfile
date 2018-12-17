@@ -6,7 +6,7 @@ MAINTAINER Laurent Prevost <laurent.prevost@heig-vd.ch>
 
 # Install some tools
 # TODO: [HB] Update to install required tool to install NodeJS
-RUN apt-get update && apt-get -y install wget curl vim rsyslog
+RUN apt-get update && apt-get -y install wget curl vim iputils-ping rsyslog
 
 # TODO: [S6] Install
 
