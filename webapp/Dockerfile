@@ -5,7 +5,7 @@ FROM node:0.12.2-wheezy
 MAINTAINER Laurent Prevost <laurent.prevost@heig-vd.ch>
 
 # Install the required tools to run our webapp and some utils
-RUN apt-get update && apt-get -y install wget curl vim && npm install -g bower
+RUN apt-get update && apt-get -y install wget curl vim iputils-ping && npm install -g bower
 
 # We copy the application and make sure the dependencies are installed before
 # other operations. Doing so will reduce the time required to build this image
